@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main_pages/main_page.dart';
-import 'signup_page.dart';
+import 'signup_page1.dart';
 import 'findID.dart';
 import 'findPW.dart';
 
@@ -91,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => SignupPage()),
+                        MaterialPageRoute(builder: (context) => SignupPage1()),
                       );
                       // 회원가입 처리
                     },
