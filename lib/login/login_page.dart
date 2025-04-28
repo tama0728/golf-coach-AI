@@ -5,6 +5,12 @@ import 'findID.dart';
 import 'findPW.dart';
 import 'bloc.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+final storage = FlutterSecureStorage();
+
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -14,6 +20,10 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _pwController = TextEditingController();
 
+  final storage = FlutterSecureStorage();
+  bool _isLoading = false;
+  String? _errorMessage;
+
   @override
   void dispose() {
     _idController.dispose();
@@ -21,16 +31,57 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     final id = _idController.text.trim();
     final pw = _pwController.text;
 
     print('아이디: $id');
     print('비밀번호: $pw');
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => MainPage()),
-    );
+    final url = Uri.parse('http://127.0.0.1:3000/api/auth/login');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userEmail': id,
+          'password': pw
+        }),
+      );
+
+      print(response.statusCode);
+      print(response.body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+
+        // 토큰 안전하게 저장
+        await storage.write(key: 'jwt_token', value: token);
+
+        // 홈 화면 등으로 이동
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => MainPage()),
+        );
+      } else {
+        setState(() {
+          _errorMessage = '로그인 실패: ${jsonDecode(response.body)['error']}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '네트워크 오류: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -98,9 +149,9 @@ class _LoginPageState extends State<LoginPage> {
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                   border: OutlineInputBorder(),
-                                  hintText: "Enter username",
-                                  labelText: "Username",
-                                  errorText: snapshot.error.toString()
+                                  hintText: "Enter user email",
+                                  labelText: "User email",
+                                  errorText: snapshot.hasError ? snapshot.error.toString() : null,
                               ),
                             ),
                           ),
@@ -116,7 +167,8 @@ class _LoginPageState extends State<LoginPage> {
                                   border: OutlineInputBorder(),
                                   hintText: "Enter password",
                                   labelText: "Password",
-                                  errorText: snapshot.error.toString()),
+                                  errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                              ),
                             ),
                           ),
                           SizedBox(height: 20),
