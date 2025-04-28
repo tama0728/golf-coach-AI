@@ -1,7 +1,18 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'login_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignupPage3 extends StatefulWidget {
+  final String id;
+  final String pw;
+  final String email;
+  final String phoneNum;
+  const SignupPage3(this.id, this.pw, this.email, this.phoneNum);
+
   @override
   _SignupPage3State createState() => _SignupPage3State();
 }
@@ -11,6 +22,87 @@ class _SignupPage3State extends State<SignupPage3> {
   final _heightController = TextEditingController();
   final _experienceController = TextEditingController();
   String? _battingDirection; // '좌' or '우'
+
+  String? userName;
+  String? phoneNum;
+  String? userHeight;
+  int? userHand;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+
+  Future<void> _handleSignup() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/signup');
+    print( "phoneNum: ${widget.phoneNum}");
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "id":widget.id,
+          "password":widget.pw,
+          "userEmail":widget.email,
+          "userName":userName,
+          "phoneNum":widget.phoneNum,
+          "userHeight":userHeight,
+          "userHand":userHand
+        }),
+      );
+
+      print(response.statusCode);
+      print(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+
+        // 토큰 안전하게 저장
+        await storage.write(key: 'jwt_token', value: token);
+
+        // 홈 화면 등으로 이동
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginPage()),
+        );
+        return ;
+      } else {
+        setState(() {
+          _errorMessage = '로그인 실패: ${jsonDecode(response.body)['error']}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '네트워크 오류: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+    // error popup
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text(_errorMessage ?? 'Unknown error'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,15 +183,23 @@ class _SignupPage3State extends State<SignupPage3> {
           height: 48,
           child: ElevatedButton(
             onPressed: () {
-              // print('다음 단계로 이동');
-              // print('닉네임: ${_nicknameController.text}');
-              // print('타석 방향: $_battingDirection');
-              // print('키: ${_heightController.text}');
-              // print('구력: ${_experienceController.text}');
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-              );
+              userName = _nicknameController.text.trim();
+              userHeight = _heightController.text.trim();
+              userHand = _battingDirection == '좌' ? 1 : 0;
+              print('다음 단계로 이동');
+              print('회원가입 정보:');
+              print('아이디: ${widget.id}');
+              print('비밀번호: ${widget.pw}');
+              print('이메일: ${widget.email}');
+              print('닉네임: $userName');
+              print('키: $userHeight');
+              print('타석 방향: $userHand');
+              print('번호: ${widget.phoneNum}');
+              // Navigator.push(
+              //   context,
+              //   MaterialPageRoute(builder: (context) => LoginPage()),
+              // );
+              _handleSignup();
             },
             child: Text('로그인하러 가기'),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../main_pages/main_page.dart';
 import 'signup_page1.dart';
 import 'findID.dart';
@@ -43,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     print('아이디: $id');
     print('비밀번호: $pw');
 
-    final url = Uri.parse('http://127.0.0.1:3000/api/auth/login');
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/login');
     try {
       final response = await http.post(
         url,
@@ -68,6 +69,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainPage()),
         );
+        return ;
       } else {
         setState(() {
           _errorMessage = '로그인 실패: ${jsonDecode(response.body)['error']}';
@@ -82,6 +84,24 @@ class _LoginPageState extends State<LoginPage> {
         _isLoading = false;
       });
     }
+    // error popup
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text(_errorMessage ?? 'Unknown error'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
