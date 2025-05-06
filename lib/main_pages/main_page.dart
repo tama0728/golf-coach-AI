@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'home.dart';
 import 'tutorial.dart';
 import 'analysis.dart';
-import 'mypage.dart';
+import 'mypage/mypage.dart';
 import 'more.dart';
 
 class MainPage extends StatefulWidget {
