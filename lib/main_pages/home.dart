@@ -1,10 +1,358 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  // 메인 색상 정의
+  static const mainColor = Color(0xFFE6F5E6);
+
+  // 기록 유무를 확인하기 위한 변수를 상태로 변경
+  bool _hasRecords = false;
+
+  // 최고 기록 데이터
+  final Map<String, dynamic> bestRecord = {'date': '2024.03.15', 'score': 85};
+
+  // 임시 공지사항 데이터
+  final List<Map<String, String>> notices = [
+    {'title': '공지사항 1', 'date': '2024.03.20'},
+    {'title': '공지사항 2', 'date': '2024.03.18'},
+    {'title': '공지사항 3', 'date': '2024.03.15'},
+  ];
+
+  // 기록 시작하기 버튼 클릭 핸들러
+  void _handleStartRecord() {
+    setState(() {
+      _hasRecords = !_hasRecords; // 현재 상태의 반대값으로 토글
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('홈 페이지'),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                _buildProfileSection(),
+                const SizedBox(height: 24),
+                _buildAnalysisButton(),
+                const SizedBox(height: 24),
+                _buildBestRecordSection(),
+                const SizedBox(height: 24),
+                _buildNoticeSection(),
+                const SizedBox(height: 24),
+                _buildRecommendedVideosSection(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSection() {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey[200],
+          ),
+          child: const Icon(Icons.person, size: 30, color: Colors.grey),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '안녕하세요,',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const Text(
+              '김수뭉님',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const Spacer(),
+      ],
+    );
+  }
+
+  Widget _buildNoticeSection() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: mainColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            // TODO: 공지사항 페이지로 이동
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.campaign_outlined,
+                        color: Colors.black87,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text(
+                      '공지사항',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: const [
+                        Text(
+                          '더보기',
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.black54,
+                          size: 12,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ...notices.map(
+                      (notice) => Column(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          // TODO: 각 공지사항 상세 페이지로 이동
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  notice['title']!,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Text(
+                                notice['date']!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (notice != notices.last)
+                        Divider(color: Colors.grey[300], height: 1),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisButton() {
+    return Container(
+      width: double.infinity,
+      height: 120,
+      decoration: BoxDecoration(
+        color: mainColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Text(
+                      '스윙 분석하기',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'AI가 당신의 스윙을 분석해드립니다',
+                      style: TextStyle(color: Colors.black54, fontSize: 14),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                const Icon(Icons.golf_course, color: Colors.black87, size: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBestRecordSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '최고 기록',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        if (_hasRecords)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: mainColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bestRecord['date'],
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${bestRecord['score']}점',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF009664),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: mainColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '아직 기록이 없습니다',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+          ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _handleStartRecord,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF009664),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(_hasRecords ? '새로운 기록 시작하기' : '기록 시작하기'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendedVideosSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '추천 영상',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          height: 200,
+          decoration: BoxDecoration(
+            color: mainColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Center(
+            child: Text(
+              '추천 영상이 곧 제공될 예정입니다',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
