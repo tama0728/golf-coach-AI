@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'analysis.dart';
+import 'main_page.dart';
+import 'more/notice.dart';
+import 'more/notice_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   bool _hasRecords = false;
 
   // 최고 기록 데이터
-  final Map<String, dynamic> bestRecord = {'date': '2024.03.15', 'score': 85};
+  final Map<String, dynamic> bestRecord = {'date': '', 'score': 0};
 
   // 임시 공지사항 데이터
   final List<Map<String, String>> notices = [
@@ -26,9 +30,8 @@ class _HomePageState extends State<HomePage> {
 
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
-    setState(() {
-      _hasRecords = !_hasRecords; // 현재 상태의 반대값으로 토글
-    });
+    // 튜토리얼 페이지로 이동 (인덱스: 1)
+    MainPage.currentState?.updateIndex(1);
   }
 
   @override
@@ -103,7 +106,13 @@ class _HomePageState extends State<HomePage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            // TODO: 공지사항 페이지로 이동
+            // 더보기 탭(인덱스: 4)으로 이동
+            MainPage.currentState?.updateIndex(4);
+            // 공지사항 페이지로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NoticePage()),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -153,11 +162,22 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
                 ...notices.map(
-                      (notice) => Column(
+                  (notice) => Column(
                     children: [
                       InkWell(
                         onTap: () {
-                          // TODO: 각 공지사항 상세 페이지로 이동
+                          // 공지사항 상세 페이지로 이동
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NoticeDetailPage(
+                                notices: notices
+                                    .map((notice) => notice['title']!)
+                                    .toList(),
+                                index: notices.indexOf(notice),
+                              ),
+                            ),
+                          );
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -211,7 +231,10 @@ class _HomePageState extends State<HomePage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {},
+          onTap: () {
+            // 분석 페이지의 인덱스는 2입니다 (홈:0, 튜토리얼:1, 분석:2, 마이페이지:3, 더보기:4)
+            MainPage.currentState?.updateIndex(2);
+          },
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
