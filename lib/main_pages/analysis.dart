@@ -57,7 +57,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text('스윙 분석'),
-          backgroundColor: Colors.green,
+          backgroundColor: Color(0xFF009664),
+          foregroundColor: Colors.white,
+
         ),
         body: Center(
           child: CircularProgressIndicator(),
@@ -68,7 +70,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('스윙 분석'),
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF009664),
+        foregroundColor: Colors.white,
       ),
       body: Stack(
         children: [
