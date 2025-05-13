@@ -128,10 +128,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Widget build(BuildContext context) {
     if (!_isCameraInitialized) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('스윙 분석'),
-          backgroundColor: Colors.green,
-        ),
         body: Center(
           child: CircularProgressIndicator(),
         ),
@@ -142,7 +138,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final controller = _trimmer!.videoPlayerController!;
       final videoSize = controller.value.size;
       return Scaffold(
-        appBar: AppBar(title: Text("Video Trimmer")),
         body: SizedBox.expand(
           child: Stack(
             children: [
@@ -211,7 +206,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                   });
                                   if (outputPath != null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Video Saved successfully')),
+                                      SnackBar(content: Text('성공적으로 저장되었습니다.')),
                                     );
                                     print('트리밍 완료: $outputPath');
                                   } else {
@@ -222,9 +217,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                 },
                               );
                             },
-                      child: Text("SAVE"),
+                      child: Text(
+                        "저장",
+                        style: TextStyle(color: Colors.green),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                       ),
                     ),
@@ -246,10 +244,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('스윙 분석'),
-        backgroundColor: Colors.green,
-      ),
       body: Stack(
         children: [
           // 카메라 미리보기
@@ -317,7 +311,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     await _startRecording(); // 녹화 시작
                   }
                 },
-                child: Icon(_isRecording ? Icons.stop : Icons.camera_alt, size: 36),
+                child: Icon(
+                  _isRecording ? Icons.stop : Icons.camera_alt,
+                  size: 36,
+                  color: _isRecording ? Colors.red : Colors.black,
+                ),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 elevation: 4,
