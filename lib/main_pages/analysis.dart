@@ -139,48 +139,30 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
 
     if (_isEditing && _trimmer != null) {
+      final controller = _trimmer!.videoPlayerController!;
+      final videoSize = controller.value.size;
       return Scaffold(
         appBar: AppBar(title: Text("Video Trimmer")),
-        body: Center(
-          child: Container(
-            color: Colors.black,
-            child: Column(
-              children: [
-                if (_isTrimming)
-                  LinearProgressIndicator(),
-                ElevatedButton(
-                  onPressed: _isTrimming
-                      ? null
-                      : () async {
-                          setState(() {
-                            _isTrimming = true;
-                          });
-                          await _trimmer!.saveTrimmedVideo(
-                            startValue: _startTrim,
-                            endValue: _endTrim,
-                            onSave: (outputPath) {
-                              setState(() {
-                                _isTrimming = false;
-                              });
-                              if (outputPath != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Video Saved successfully')),
-                                );
-                                print('트리밍 완료: $outputPath');
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('트리밍 실패!')),
-                                );
-                              }
-                            },
-                          );
-                        },
-                  child: Text("SAVE"),
+        body: SizedBox.expand(
+          child: Stack(
+            children: [
+              // 영상 미리보기(화면 전체, 비율 유지, 잘림 없이)
+              Positioned.fill(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: videoSize.width,
+                    height: videoSize.height,
+                    child: VideoViewer(trimmer: _trimmer!),
+                  ),
                 ),
-                Expanded(
-                  child: VideoViewer(trimmer: _trimmer!),
-                ),
-                TrimViewer(
+              ),
+              // TrimViewer (하단 오버레이)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 90,
+                child: TrimViewer(
                   trimmer: _trimmer!,
                   viewerHeight: 50.0,
                   viewerWidth: MediaQuery.of(context).size.width,
@@ -189,22 +171,75 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   onChangeEnd: (value) => setState(() => _endTrim = value),
                   onChangePlaybackState: (value) => setState(() => _isRecording = value),
                 ),
-                TextButton(
-                  child: _isRecording
-                      ? Icon(Icons.pause, size: 80.0, color: Colors.white)
-                      : Icon(Icons.play_arrow, size: 80.0, color: Colors.white),
-                  onPressed: () async {
-                    bool playbackState = await _trimmer!.videoPlaybackControl(
-                      startValue: _startTrim,
-                      endValue: _endTrim,
-                    );
-                    setState(() {
-                      _isRecording = playbackState;
-                    });
-                  },
+              ),
+              // SAVE + 재생/정지 버튼 (하단 오버레이)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: _isRecording
+                          ? Icon(Icons.pause, size: 40.0, color: Colors.white)
+                          : Icon(Icons.play_arrow, size: 40.0, color: Colors.white),
+                      onPressed: () async {
+                        bool playbackState = await _trimmer!.videoPlaybackControl(
+                          startValue: _startTrim,
+                          endValue: _endTrim,
+                        );
+                        setState(() {
+                          _isRecording = playbackState;
+                        });
+                      },
+                    ),
+                    SizedBox(width: 24),
+                    ElevatedButton(
+                      onPressed: _isTrimming
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isTrimming = true;
+                              });
+                              await _trimmer!.saveTrimmedVideo(
+                                startValue: _startTrim,
+                                endValue: _endTrim,
+                                onSave: (outputPath) {
+                                  setState(() {
+                                    _isTrimming = false;
+                                  });
+                                  if (outputPath != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Video Saved successfully')),
+                                    );
+                                    print('트리밍 완료: $outputPath');
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('트리밍 실패!')),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                      child: Text("SAVE"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // 진행 표시 (상단 오버레이)
+              if (_isTrimming)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: LinearProgressIndicator(),
+                ),
+            ],
           ),
         ),
       );
