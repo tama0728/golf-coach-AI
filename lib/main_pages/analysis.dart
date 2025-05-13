@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
+import 'package:video_player/video_player.dart';
+import 'dart:io';
+import 'package:video_trimmer/video_trimmer.dart';
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -10,6 +14,16 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage> {
   CameraController? _controller;
   bool _isCameraInitialized = false;
+  bool _isRecording = false;
+  bool _isEditing = false;
+  Duration _recordingDuration = Duration.zero;  // 촬영 시간을 저장할 변수
+  Timer? _timer;  // 타이머 변수
+  String? _videoPath;
+  VideoPlayerController? _videoController;
+  double _startTrim = 0.0;
+  double _endTrim = 0.0;
+  Trimmer? _trimmer;
+  bool _isTrimming = false;
 
   @override
   void initState() {
@@ -45,10 +59,69 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
   }
 
+  Future<void> _stopRecording() async {
+    if (!_controller!.value.isRecordingVideo) {
+      return;
+    }
+    try {
+      final XFile video = await _controller!.stopVideoRecording();
+      setState(() {
+        _isRecording = false;
+        _timer?.cancel();
+        _recordingDuration = Duration.zero;
+        _videoPath = video.path;
+        _isEditing = true;
+      });
+      _trimmer = Trimmer();
+      await _trimmer!.loadVideo(videoFile: File(_videoPath!));
+      setState(() {});
+      print('영상이 저장되었습니다: $_videoPath');
+    } catch (e) {
+      print('촬영 중지 실패: $e');
+      setState(() {
+        _isEditing = false;
+        _trimmer = null;
+        _videoPath = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('영상 파일을 불러오지 못했습니다. 다시 시도해 주세요.')),
+      );
+    }
+  }
+
+  Future<void> _startRecording() async {
+    if (!_controller!.value.isInitialized) return;
+    try {
+      await _controller!.startVideoRecording();
+      setState(() {
+        _isRecording = true;
+        _recordingDuration = Duration.zero;
+        _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+          setState(() {
+            _recordingDuration += Duration(seconds: 1);
+          });
+        });
+      });
+    } catch (e) {
+      print('촬영 시작 실패: $e');
+    }
+  }
+
   @override
   void dispose() {
+    _timer?.cancel();  // 타이머 정리
     _controller?.dispose();
+    _videoController?.dispose();
     super.dispose();
+  }
+
+  // 촬영 시간을 문자열로 변환하는 함수
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
   }
 
   @override
@@ -61,6 +134,78 @@ class _AnalysisPageState extends State<AnalysisPage> {
         ),
         body: Center(
           child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_isEditing && _trimmer != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("Video Trimmer")),
+        body: Center(
+          child: Container(
+            color: Colors.black,
+            child: Column(
+              children: [
+                if (_isTrimming)
+                  LinearProgressIndicator(),
+                ElevatedButton(
+                  onPressed: _isTrimming
+                      ? null
+                      : () async {
+                          setState(() {
+                            _isTrimming = true;
+                          });
+                          await _trimmer!.saveTrimmedVideo(
+                            startValue: _startTrim,
+                            endValue: _endTrim,
+                            onSave: (outputPath) {
+                              setState(() {
+                                _isTrimming = false;
+                              });
+                              if (outputPath != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Video Saved successfully')),
+                                );
+                                print('트리밍 완료: $outputPath');
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('트리밍 실패!')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                  child: Text("SAVE"),
+                ),
+                Expanded(
+                  child: VideoViewer(trimmer: _trimmer!),
+                ),
+                TrimViewer(
+                  trimmer: _trimmer!,
+                  viewerHeight: 50.0,
+                  viewerWidth: MediaQuery.of(context).size.width,
+                  maxVideoLength: const Duration(seconds: 10),
+                  onChangeStart: (value) => setState(() => _startTrim = value),
+                  onChangeEnd: (value) => setState(() => _endTrim = value),
+                  onChangePlaybackState: (value) => setState(() => _isRecording = value),
+                ),
+                TextButton(
+                  child: _isRecording
+                      ? Icon(Icons.pause, size: 80.0, color: Colors.white)
+                      : Icon(Icons.play_arrow, size: 80.0, color: Colors.white),
+                  onPressed: () async {
+                    bool playbackState = await _trimmer!.videoPlaybackControl(
+                      startValue: _startTrim,
+                      endValue: _endTrim,
+                    );
+                    setState(() {
+                      _isRecording = playbackState;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -91,11 +236,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
             child: Column(
               children: [
                 Text(
-                  '촬영을 시작한 후\n아래와 같은 자세를 취해주세요',
+                  _isRecording 
+                    ? _formatDuration(_recordingDuration)  // 촬영 시간 표시
+                    : '촬영을 시작한 후\n아래와 같은 자세를 취해주세요',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 18,
+                    fontSize: _isRecording ? 48 : 18,  // 촬영 중일 때는 더 큰 글씨
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(
@@ -115,7 +262,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               opacity: 0.4,
               child: Image.asset(
                 'assets/guide_golfer.png',
-                width: MediaQuery.of(context).size.width * 0.9, //화면에 몇퍼센트를 채우는지
+                width: MediaQuery.of(context).size.width * 0.9,
                 height: MediaQuery.of(context).size.height * 0.9,
                 fit: BoxFit.contain,
               ),
@@ -128,10 +275,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
             right: 0,
             child: Center(
               child: FloatingActionButton(
-                onPressed: () {
-                  // 촬영 기능 구현
+                onPressed: () async {
+                  if (_isRecording) {
+                    await _stopRecording(); // 녹화 종료 및 편집 모드 진입
+                  } else {
+                    await _startRecording(); // 녹화 시작
+                  }
                 },
-                child: Icon(Icons.camera_alt, size: 36),
+                child: Icon(_isRecording ? Icons.stop : Icons.camera_alt, size: 36),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
                 elevation: 4,
