@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'analysis.dart';
 import 'main_page.dart';
 import 'more/notice.dart';
@@ -9,6 +10,21 @@ class HomePage extends StatefulWidget {
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+// VideoModel 클래스 추가
+class VideoModel {
+  final String title;
+  final String thumbnailUrl;
+  final String videoUrl;
+  final String description;
+
+  VideoModel({
+    required this.title,
+    required this.thumbnailUrl,
+    required this.videoUrl,
+    required this.description,
+  });
 }
 
 class _HomePageState extends State<HomePage> {
@@ -26,6 +42,28 @@ class _HomePageState extends State<HomePage> {
     {'title': '공지사항 1', 'date': '2024.03.20'},
     {'title': '공지사항 2', 'date': '2024.03.18'},
     {'title': '공지사항 3', 'date': '2024.03.15'},
+  ];
+
+  // 추천 영상 데이터
+  final List<VideoModel> recommendedVideos = [
+    VideoModel(
+      title: '골프 스윙의 기본',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '골프 스윙의 기본 자세와 동작을 배워보세요.',
+    ),
+    VideoModel(
+      title: '골프 스윙 교정',
+      thumbnailUrl: 'https://img.youtube.com/vi/jWQx2f-CErU/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=jWQx2f-CErU',
+      description: '스윙 자세 교정 방법',
+    ),
+    VideoModel(
+      title: '골프 스윙 분석',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '스윙 분석과 피드백',
+    ),
   ];
 
   // 기록 시작하기 버튼 클릭 핸들러
@@ -360,19 +398,101 @@ class _HomePageState extends State<HomePage> {
           '추천 영상',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          height: 200,
-          decoration: BoxDecoration(
-            color: mainColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Center(
-            child: Text(
-              '추천 영상이 곧 제공될 예정입니다',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: recommendedVideos.length,
+            itemBuilder: (context, index) {
+              final video = recommendedVideos[index];
+              return GestureDetector(
+                onTap: () async {
+                  final Uri url = Uri.parse(video.videoUrl);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  width: 240,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: mainColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12)),
+                            child: Image.network(
+                              video.thumbnailUrl,
+                              height: 100,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child:
+                                      const Icon(Icons.video_library, size: 40),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.play_circle_outline,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              video.description,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
