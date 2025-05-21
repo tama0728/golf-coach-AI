@@ -6,6 +6,8 @@ import 'mypage/mypage.dart';
 import 'more/more.dart';
 
 class MainPage extends StatefulWidget {
+  static _MainPageState? currentState;
+
   @override
   _MainPageState createState() => _MainPageState();
 }
@@ -20,6 +22,24 @@ class _MainPageState extends State<MainPage> {
     MyPage(),
     MorePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    MainPage.currentState = this;
+  }
+
+  @override
+  void dispose() {
+    MainPage.currentState = null;
+    super.dispose();
+  }
+
+  void updateIndex(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

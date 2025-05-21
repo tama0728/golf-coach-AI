@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'analysis.dart';
+import 'main_page.dart';
+import 'more/notice.dart';
+import 'more/notice_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
+}
+
+// VideoModel 클래스 추가
+class VideoModel {
+  final String title;
+  final String thumbnailUrl;
+  final String videoUrl;
+  final String description;
+
+  VideoModel({
+    required this.title,
+    required this.thumbnailUrl,
+    required this.videoUrl,
+    required this.description,
+  });
 }
 
 class _HomePageState extends State<HomePage> {
@@ -15,7 +35,7 @@ class _HomePageState extends State<HomePage> {
   bool _hasRecords = false;
 
   // 최고 기록 데이터
-  final Map<String, dynamic> bestRecord = {'date': '2024.03.15', 'score': 85};
+  final Map<String, dynamic> bestRecord = {'date': '', 'score': 0};
 
   // 임시 공지사항 데이터
   final List<Map<String, String>> notices = [
@@ -24,11 +44,32 @@ class _HomePageState extends State<HomePage> {
     {'title': '공지사항 3', 'date': '2024.03.15'},
   ];
 
+  // 추천 영상 데이터
+  final List<VideoModel> recommendedVideos = [
+    VideoModel(
+      title: '골프 스윙의 기본',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '골프 스윙의 기본 자세와 동작을 배워보세요.',
+    ),
+    VideoModel(
+      title: '골프 스윙 교정',
+      thumbnailUrl: 'https://img.youtube.com/vi/jWQx2f-CErU/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=jWQx2f-CErU',
+      description: '스윙 자세 교정 방법',
+    ),
+    VideoModel(
+      title: '골프 스윙 분석',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '스윙 분석과 피드백',
+    ),
+  ];
+
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
-    setState(() {
-      _hasRecords = !_hasRecords; // 현재 상태의 반대값으로 토글
-    });
+    // 튜토리얼 페이지로 이동 (인덱스: 1)
+    MainPage.currentState?.updateIndex(1);
   }
 
   @override
@@ -103,7 +144,13 @@ class _HomePageState extends State<HomePage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            // TODO: 공지사항 페이지로 이동
+            // 더보기 탭(인덱스: 4)으로 이동
+            MainPage.currentState?.updateIndex(4);
+            // 공지사항 페이지로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NoticePage()),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -153,11 +200,22 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
                 ...notices.map(
-                      (notice) => Column(
+                  (notice) => Column(
                     children: [
                       InkWell(
                         onTap: () {
-                          // TODO: 각 공지사항 상세 페이지로 이동
+                          // 공지사항 상세 페이지로 이동
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NoticeDetailPage(
+                                notices: notices
+                                    .map((notice) => notice['title']!)
+                                    .toList(),
+                                index: notices.indexOf(notice),
+                              ),
+                            ),
+                          );
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -211,7 +269,10 @@ class _HomePageState extends State<HomePage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {},
+          onTap: () {
+            // 분석 페이지의 인덱스는 2입니다 (홈:0, 튜토리얼:1, 분석:2, 마이페이지:3, 더보기:4)
+            MainPage.currentState?.updateIndex(2);
+          },
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -337,19 +398,101 @@ class _HomePageState extends State<HomePage> {
           '추천 영상',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          height: 200,
-          decoration: BoxDecoration(
-            color: mainColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Center(
-            child: Text(
-              '추천 영상이 곧 제공될 예정입니다',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: recommendedVideos.length,
+            itemBuilder: (context, index) {
+              final video = recommendedVideos[index];
+              return GestureDetector(
+                onTap: () async {
+                  final Uri url = Uri.parse(video.videoUrl);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  width: 240,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: mainColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12)),
+                            child: Image.network(
+                              video.thumbnailUrl,
+                              height: 100,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child:
+                                      const Icon(Icons.video_library, size: 40),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.play_circle_outline,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              video.description,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
