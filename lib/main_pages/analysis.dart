@@ -286,17 +286,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
             ),
           ),
           // 골퍼 실루엣 가이드라인
-          Center(
-            child: Opacity(
-              opacity: 0.4,
-              child: Image.asset(
-                'assets/guide_golfer.png',
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.9,
-                fit: BoxFit.contain,
+          if (!_isRecording)
+            Center(
+              child: Opacity(
+                opacity: 0.4,
+                child: Image.asset(
+                  'assets/guide_golfer.png',
+                  width: MediaQuery.of(context).size.width * 3.0,
+                  height: MediaQuery.of(context).size.height * 3.0,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
           // 촬영 버튼
           Positioned(
             bottom: 40,
