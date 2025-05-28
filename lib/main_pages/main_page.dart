@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home.dart';
 import 'tutorial.dart';
-import 'analysis.dart';
+import 'analysis/analysis.dart';
 import 'mypage/mypage.dart';
 import 'more/more.dart';
 

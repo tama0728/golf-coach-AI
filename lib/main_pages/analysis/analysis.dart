@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:video_trimmer/video_trimmer.dart';
+import 'result.dart';
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -51,6 +52,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     try {
       await _controller!.initialize();
+      await _controller!.prepareForVideoRecording();  // 비디오 로딩 최적화
       setState(() {
         _isCameraInitialized = true;
       });
@@ -161,7 +163,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   trimmer: _trimmer!,
                   viewerHeight: 50.0,
                   viewerWidth: MediaQuery.of(context).size.width,
-                  maxVideoLength: const Duration(seconds: 10),
+                  maxVideoLength: const Duration(seconds: 30),
                   onChangeStart: (value) => setState(() => _startTrim = value),
                   onChangeEnd: (value) => setState(() => _endTrim = value),
                   onChangePlaybackState: (value) => setState(() => _isRecording = value),
@@ -209,12 +211,19 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                       SnackBar(content: Text('성공적으로 저장되었습니다.')),
                                     );
                                     print('트리밍 완료: $outputPath');
+                                    _videoPath = outputPath;
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('트리밍 실패!')),
                                     );
                                   }
                                 },
+                              );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ResultPage(_videoPath!),
+                                ),
                               );
                             },
                       child: Text(
