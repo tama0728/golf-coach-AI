@@ -61,9 +61,12 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
+        final userId = data['id']?.toString();
 
         // 토큰 안전하게 저장
         await storage.write(key: 'jwt_token', value: token);
+        final check = await storage.read(key: 'jwt_token');
+        print('저장된 JWT 토큰: $check');
 
         // 홈 화면 등으로 이동
         Navigator.of(context).pushReplacement(
