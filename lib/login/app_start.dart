@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login_page.dart';
+import '../main_pages/main_page.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -8,14 +9,29 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final storage = FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
-    Timer(Duration(seconds: 1), () {
+    _checkLogin();
+  }
+
+  Future<void> _checkLogin() async {
+    final token = await storage.read(key: 'jwt_token');
+
+    // 약간 딜레이 줘서 로딩 느낌 나게
+    await Future.delayed(Duration(milliseconds: 500));
+
+    if (token != null) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => LoginPage()),
+        MaterialPageRoute(builder: (_) => MainPage()),
       );
-    });
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => LoginPage()),
+      );
+    }
   }
 
   @override
@@ -23,19 +39,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.golf_course, size: 100, color: Colors.green),
-            SizedBox(height: 20),
-            Text(
-              '골프 코치',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            CircularProgressIndicator(color: Colors.green),
-          ],
-        ),
+        child: CircularProgressIndicator(color: Colors.green),
       ),
     );
   }

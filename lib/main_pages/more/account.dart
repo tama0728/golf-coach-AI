@@ -10,7 +10,9 @@ class AccountPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('계정관리', style: TextStyle(color: Colors.black87)),
+        toolbarHeight: 70,
+        title: const Text('계정관리', style: TextStyle(fontSize: 20,
+            fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 1,
         centerTitle: true,
@@ -19,17 +21,30 @@ class AccountPage extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
+          const Divider(height: 1, thickness: 1),
           ListTile(
-            title: const Text('로그아웃'),
-            trailing: const Icon(Icons.chevron_right),
+            contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            title: const Text('로그아웃',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 19,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 35),
             onTap: () {
               // TODO: 로그아웃 처리
             },
           ),
           const Divider(height: 1, thickness: 1),
           ListTile(
-            title: const Text('회원탈퇴'),
-            trailing: const Icon(Icons.chevron_right),
+            contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            title: const Text('회원탈퇴',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 19,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 35),
             onTap: () {
               Navigator.push(
                 context,

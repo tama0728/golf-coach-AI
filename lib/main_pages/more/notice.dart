@@ -30,8 +30,13 @@ class _NoticePageState extends State<NoticePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('공지사항', style: TextStyle(color: Colors.black87)),
+        toolbarHeight: 70,
+        title: const Text('공지사항',
+            style: TextStyle(fontSize: 20,
+              fontWeight: FontWeight.bold,)
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
         centerTitle: true,
@@ -47,8 +52,14 @@ class _NoticePageState extends State<NoticePage> {
               separatorBuilder: (_, __) => const Divider(height: 1, thickness: 1),
               itemBuilder: (context, idx) {
                 return ListTile(
-                  title: Text(_notices[idx]),
-                  trailing: const Icon(Icons.chevron_right),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                  title: Text(_notices[idx],
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 19,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 35),
                   onTap: () {
                     Navigator.push(
                       context,
