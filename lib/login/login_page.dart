@@ -33,74 +33,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final id = _idController.text.trim();
-    final pw = _pwController.text;
-
-    print('아이디: $id');
-    print('비밀번호: $pw');
-
-    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/login');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userEmail': id,
-          'password': pw
-        }),
-      );
-
-      print(response.statusCode);
-      print(response.body);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final token = data['token'];
-
-        // 토큰 안전하게 저장
-        await storage.write(key: 'jwt_token', value: token);
-
-        // 홈 화면 등으로 이동
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => MainPage()),
-        );
-        return ;
-      } else {
-        setState(() {
-          _errorMessage = '로그인 실패: ${jsonDecode(response.body)['error']}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = '네트워크 오류: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-    // error popup
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Error'),
-          content: Text(_errorMessage ?? 'Unknown error'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+    // 네트워크 요청 없이 바로 메인 페이지로 이동
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => MainPage()),
     );
   }
 
