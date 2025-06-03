@@ -1,12 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import 'notice.dart';
 import 'customer_center.dart';
 import 'policy.dart';
 import 'account.dart';
 
-
-class MorePage extends StatelessWidget {
+class MorePage extends StatefulWidget {
   const MorePage({Key? key}) : super(key: key);
+
+  @override
+  State<MorePage> createState() => _MorePageState();
+}
+
+class _MorePageState extends State<MorePage> {
+  String? _appVersion;
+  bool _loadingVersion = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAppVersion();
+  }
+
+  Future<void> fetchAppVersion() async {
+    try {
+      final resp = await http.get(Uri.parse('http://localhost:3000/api/version')); //localhost
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        setState(() {
+          _appVersion = data['version'] ?? '알 수 없음';
+          _loadingVersion = false;
+        });
+      } else {
+        setState(() {
+          _appVersion = '버전 정보 오류';
+          _loadingVersion = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _appVersion = '네트워크 오류';
+        _loadingVersion = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +120,17 @@ class MorePage extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // 앱 버전
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              '앱 버전 1.00',
+          // 앱 버전 (DB에서 실시간 표시)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _loadingVersion
+                ? const Text(
+              '앱 버전 정보를 불러오는 중...',
               style: TextStyle(color: Colors.grey, fontSize: 12),
+            )
+                : Text(
+              '앱 버전 ${_appVersion ?? '알 수 없음'}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),
         ],

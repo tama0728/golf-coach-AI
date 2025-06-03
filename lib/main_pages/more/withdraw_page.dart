@@ -44,12 +44,13 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
       // 3) API 호출: DELETE /users/:id
       final host = dotenv.get('HOSTIP'); // .env: HOSTIP=golf-coach.duckdns.org:3000
-      final url = Uri.parse('http://$host/users/me');
+      final url = Uri.parse('http://$host:3000/users/me');
+      print('🔨 탈퇴 요청 URL = $url');
       final resp = await http.delete(
         url,
         headers: {'Authorization': 'Bearer $token'},
       );
-      print('🔨 탈퇴 요청 URL = $url');
+
 
       if (resp.statusCode == 200) {
         // 4) 토큰 & user_id 삭제
