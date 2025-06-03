@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'edit_body_info.dart';
 
 class MyPage extends StatelessWidget {
   final List<Map<String, String>> records = [
@@ -21,12 +22,26 @@ class MyPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '신체정보',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '신체정보',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 SizedBox(height: 24),
                 Row(
