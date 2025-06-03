@@ -16,16 +16,44 @@ class ResultPage extends StatefulWidget {
   _ResultPageState createState() => _ResultPageState();
 }
 
+class SwingAnalysis {
+  final String swingPart;
+  final String evaluation;
+
+  SwingAnalysis({
+    required this.swingPart,
+    required this.evaluation,
+  });
+
+  // factory SwingAnalysis.fromJson(List<dynamic> json) {
+  //   print('0, 1: ${json[0]}, ${json[1]}');
+  //   return SwingAnalysis(
+  //     swingPart: json[0] ?? 'Unknown Part',
+  //     evaluation: json[1] ?? 'No Evaluation',
+  //   );
+  // }
+
+  factory SwingAnalysis.fromJson(Map<String, dynamic> json) {
+    // print('0, 1: ${json[0]}, ${json[1]}');
+    return SwingAnalysis(
+      swingPart: json['swing_part'] ?? 'Unknown Part',
+      evaluation: json['evaluation'] ?? 'No Evaluation',
+    );
+  }
+}
+
 class _ResultPageState extends State<ResultPage> {
   String? _resultData;
   Map<String, dynamic>? _resultJsonData;
-  bool _isLoading = true;
+  bool _isLoaded = false;
   String? _errorMessage;
   VideoPlayerController? _controller;
   File? _videoFile;
   String? fileId;
   List<File> _imageFiles = [];
   bool _isZipLoading = false;
+  bool _isSwingAnalysis = false;
+  List<SwingAnalysis> _swingAnalysisList = [];
 
   @override
   void initState() {
@@ -38,7 +66,7 @@ class _ResultPageState extends State<ResultPage> {
     if (url.isEmpty) {
       setState(() {
         _errorMessage = '다운로드 URL이 없습니다.';
-        _isLoading = false;
+        _isLoaded = false;
       });
       return;
     }
@@ -55,7 +83,7 @@ class _ResultPageState extends State<ResultPage> {
         if (mounted) {
           setState(() {
             _errorMessage = '영상 로딩 실패: $e';
-            _isLoading = false;
+            _isLoaded = false;
           });
         }
         throw e; // 필요시 주석 처리
@@ -66,13 +94,13 @@ class _ResultPageState extends State<ResultPage> {
         _controller = controller
           ..play()
           ..setLooping(true);
-        _isLoading = false;
+        _isLoaded = true;
       });
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = '영상 다운로드 실패: $e';
-          _isLoading = false;
+          _isLoaded = false;
         });
       }
     }
@@ -85,7 +113,7 @@ class _ResultPageState extends State<ResultPage> {
       return;
     }
     try {
-      setState(() => _isZipLoading = true);
+      // setState(() => _isZipLoading = true);
       final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$zipUrl'));
       final archive = ZipDecoder().decodeBytes(response.bodyBytes);
       final tempDir = await getTemporaryDirectory();
@@ -103,7 +131,35 @@ class _ResultPageState extends State<ResultPage> {
     } catch (e) {
       setState(() => _errorMessage = 'ZIP 처리 오류: $e');
     } finally {
-      setState(() => _isZipLoading = false);
+      setState(() => _isZipLoading = true);
+    }
+  }
+
+  Future<void> _getSwingAnalysis() async {
+    final swingData = _resultJsonData?['swing_analysis'];
+    if (swingData == null || swingData.isEmpty) {
+      setState(() => _errorMessage = '스윙 분석 데이터가 없습니다');
+      return;
+    }
+    try {
+      final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$swingData'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          print('Swing Analysis Data: $data');
+          print(data.runtimeType);
+          _swingAnalysisList = data
+              .map<SwingAnalysis>((item) => SwingAnalysis.fromJson(item as Map<String, dynamic>))
+              .toList();
+          _errorMessage = null;
+          _isSwingAnalysis = true;
+        });
+      } else {
+        setState(() => _errorMessage = '서버 응답 오류: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = '스윙 분석 데이터 불러오기 오류: $e');
     }
   }
 
@@ -131,19 +187,21 @@ class _ResultPageState extends State<ResultPage> {
         setState(() {
           _resultJsonData = jsonData;
           _resultData = responseData;
+          _isLoaded = true;
         });
         await _downloadAndPlay();
         await _downloadAndExtractZip();
+        await _getSwingAnalysis();
       } else {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
-          _isLoading = false;
+          _isLoaded = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = '오류 발생: $e';
-        _isLoading = false;
+        _isLoaded = false;
       });
     }
   }
@@ -159,7 +217,8 @@ class _ResultPageState extends State<ResultPage> {
       return const SizedBox();
     }
     return Container(
-      height: 300,
+      // height: MediaQuery.of(context).size.height / 2,
+      width: double.infinity, // 너비를 꽉 채움
       child: AspectRatio(
         aspectRatio: _controller!.value.aspectRatio,
         child: VideoPlayer(_controller!),
@@ -170,14 +229,42 @@ class _ResultPageState extends State<ResultPage> {
   Widget _buildImageGrid() {
     if (_imageFiles.isEmpty) return const SizedBox();
     return Container(
-      height: 150,
+      height: MediaQuery.of(context).size.height / 3,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _imageFiles.length,
         itemBuilder: (ctx, index) => Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Image.file(_imageFiles[index], width: 150, fit: BoxFit.cover),
+          child: Image.file(_imageFiles[index], width: MediaQuery.of(context).size.width * 8 / 10, fit: BoxFit.contain),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisList() {
+    if (_errorMessage != null) {
+      return Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)));
+    }
+
+    if (_swingAnalysisList.isEmpty) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: _swingAnalysisList.length,
+        itemBuilder: (context, index) {
+          final analysis = _swingAnalysisList[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            child: ListTile(
+              title: Text(analysis.swingPart),
+              subtitle: Text(analysis.evaluation),
+            ),
+          );
+        },
       ),
     );
   }
@@ -186,22 +273,30 @@ class _ResultPageState extends State<ResultPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('처리 결과')),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 2,
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                ? Center(child: Text(_errorMessage!))
-                : _buildVideoPlayer(),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_errorMessage != null)
+              Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)))
+            else
+              Center(child: Text('결과 데이터가 성공적으로 로드되었습니다!')),
+              if (_isLoaded)
+                _buildVideoPlayer()
+              else
+                Center(child: CircularProgressIndicator()),
 
-          ),
-          if (_isZipLoading)
-            const LinearProgressIndicator()
-          else
-            _buildImageGrid(),
-        ],
+              if (_isZipLoading)
+                _buildImageGrid()
+              else
+                Center(child: CircularProgressIndicator()),
+
+              if (_isSwingAnalysis)
+                _buildAnalysisList()
+              else
+                Center(child: CircularProgressIndicator())
+          ],
+        ),
       ),
     );
   }

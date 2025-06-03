@@ -1,5 +1,7 @@
 // lib/main_pages/more/withdraw_page.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -32,6 +34,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
         ],
       ),
     );
+    print('탈퇴 확인 결과 confirm=$confirm');
     if (confirm != true) return;
 
     setState(() => _isLoading = true);
@@ -39,15 +42,18 @@ class _WithdrawPageState extends State<WithdrawPage> {
     try {
       // 2) token 가져오기 (로그인 때 저장해두었다고 가정)
       final token = await _storage.read(key: 'jwt_token');
-      print('🔨 탈퇴 시도하는 token=$token');
+      print('탈퇴 시도하는 token=$token');
       if (token == null) throw 'token 찾을 수 없습니다.';
 
       // 3) API 호출: DELETE /users/:id
-      final host = dotenv.get('HOSTIP'); // .env: HOSTIP=golf-coach.duckdns.org:3000
-      final url = Uri.parse('http://$host/users/me');
+      final host = dotenv.get('HOSTIP');
+      final url = Uri.parse('http://$host:3000/users/me');
       final resp = await http.delete(
         url,
         headers: {'Authorization': 'Bearer $token'},
+        body: jsonEncode({
+          'token': token
+        }),
       );
       print('🔨 탈퇴 요청 URL = $url');
 
