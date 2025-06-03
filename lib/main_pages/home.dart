@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-                _buildProfileSection(),
+                _buildProfileSection(context),
                 const SizedBox(height: 24),
                 _buildAnalysisButton(),
                 const SizedBox(height: 24),
@@ -101,36 +101,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProfileSection() {
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.grey[200],
+  Widget _buildProfileSection(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        MainPage.currentState?.updateIndex(3);
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey[200],
+            ),
+            child: const Icon(Icons.person, size: 30, color: Colors.grey),
           ),
-          child: const Icon(Icons.person, size: 30, color: Colors.grey),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '안녕하세요,',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const Text(
-              '김수뭉님',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const Spacer(),
-      ],
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '안녕하세요,',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const Text(
+                '김수뭉님',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Spacer(),
+        ],
+      ),
     );
   }
+
 
   Widget _buildNoticeSection() {
     return Container(
