@@ -11,7 +11,10 @@ class PolicyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('약관 및 정책', style: TextStyle(color: Colors.black87)),
+        toolbarHeight: 70,
+        title: const Text('약관 및 정책', style: TextStyle(fontSize: 20,
+            fontWeight: FontWeight.bold)
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
         centerTitle: true,
@@ -24,8 +27,14 @@ class PolicyPage extends StatelessWidget {
 
           // 서비스 이용약관
           ListTile(
-            title: const Text('서비스 이용약관'),
-            trailing: const Icon(Icons.chevron_right),
+            contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            title: const Text('서비스 이용약관',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 19,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 35),
             onTap: () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const TermsPage())
@@ -36,8 +45,14 @@ class PolicyPage extends StatelessWidget {
 
           // 개인정보 처리방침
           ListTile(
-            title: const Text('개인정보 처리방침'),
-            trailing: const Icon(Icons.chevron_right),
+            contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            title: const Text('개인정보 처리방침',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 19,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 35),
             onTap: () {
               Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const PrivacyPage())
@@ -48,8 +63,14 @@ class PolicyPage extends StatelessWidget {
 
           // 라이선스
           ListTile(
-            title: const Text('라이선스'),
-            trailing: const Icon(Icons.chevron_right),
+            contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            title: const Text('라이선스',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 19,
+              ),
+            ),
+            trailing: const Icon(Icons.chevron_right, size: 35),
             onTap: () {
               Navigator.push(
                 context,
