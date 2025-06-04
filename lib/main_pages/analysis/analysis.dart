@@ -26,13 +26,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Trimmer? _trimmer;
   bool _isTrimming = false;
 
+  List<CameraDescription> _cameras = [];
+  int _selectedCameraIdx = 0;
+
   @override
   void initState() {
     super.initState();
     _initializeCamera();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _initializeCamera([int cameraIdx = 0]) async {
     // 카메라 권한 요청
     final status = await Permission.camera.request();
     if (status.isDenied) {
@@ -40,12 +43,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
 
     // 사용 가능한 카메라 목록 가져오기
-    final cameras = await availableCameras();
-    // 전면 카메라 선택 (일반적으로 마지막 카메라가 전면 카메라)
-    final frontCamera = cameras.last;
+    _cameras = await availableCameras();
+    if (_cameras.isEmpty) return;
+    if (cameraIdx >= _cameras.length) cameraIdx = 0;
+    _selectedCameraIdx = cameraIdx;
+    final selectedCamera = _cameras[_selectedCameraIdx];
 
+    _controller?.dispose();
     _controller = CameraController(
-      frontCamera,
+      selectedCamera,
       ResolutionPreset.high,
       enableAudio: false,
     );
@@ -59,6 +65,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
     } catch (e) {
       print('카메라 초기화 실패: $e');
     }
+  }
+
+  void _switchCamera() async {
+    if (_cameras.length < 2) return;
+    int newIdx = (_selectedCameraIdx + 1) % _cameras.length;
+    setState(() {
+      _isCameraInitialized = false;
+    });
+    await _initializeCamera(newIdx);
   }
 
   Future<void> _stopRecording() async {
@@ -163,8 +178,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   trimmer: _trimmer!,
                   viewerHeight: 50.0,
                   viewerWidth: MediaQuery.of(context).size.width,
-                  maxVideoLength: const Duration(seconds: 30),
-                  onChangeStart: (value) => setState(() => _startTrim = value),
+                  maxVideoLength: const Duration(seconds: 5),
+                  // numberOfFrames: 60,
+                  onChangeStart: (value) async {
+                    setState(() => _startTrim = value);
+                    final controller = _trimmer!.videoPlayerController;
+                    if (controller != null) {
+                      await controller.seekTo(Duration(milliseconds: (value * controller.value.duration.inMilliseconds).toInt()));
+                    }
+                  },
                   onChangeEnd: (value) => setState(() => _endTrim = value),
                   onChangePlaybackState: (value) => setState(() => _isRecording = value),
                 ),
@@ -264,6 +286,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 height: _controller!.value.previewSize!.width,
                 child: CameraPreview(_controller!),
               ),
+            ),
+          ),
+          // 카메라 전환 버튼 (오른쪽 상단)
+          Positioned(
+            top: 40,
+            right: 24,
+            child: FloatingActionButton(
+              mini: true,
+              heroTag: 'switchCamera',
+              onPressed: _switchCamera,
+              child: Icon(Icons.cameraswitch),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 4,
             ),
           ),
           // 안내 문구
