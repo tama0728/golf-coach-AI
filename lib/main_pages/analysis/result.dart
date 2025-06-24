@@ -271,33 +271,26 @@ class _ResultPageState extends State<ResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 모든 데이터가 준비될 때까지 하나의 로딩 아이콘만 표시
+    final isAllLoaded = _isLoaded && _isZipLoading && _isSwingAnalysis;
     return Scaffold(
       appBar: AppBar(title: const Text('처리 결과')),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_errorMessage != null)
-              Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)))
-            else
-              Center(child: Text('결과 데이터가 성공적으로 로드되었습니다!')),
-              if (_isLoaded)
-                _buildVideoPlayer()
-              else
-                Center(child: CircularProgressIndicator()),
-
-              if (_isZipLoading)
-                _buildImageGrid()
-              else
-                Center(child: CircularProgressIndicator()),
-
-              if (_isSwingAnalysis)
-                _buildAnalysisList()
-              else
-                Center(child: CircularProgressIndicator())
-          ],
-        ),
-      ),
+      body: isAllLoaded
+          ? SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_errorMessage != null)
+                    Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)))
+                  else
+                    Center(child: Text('결과 데이터가 성공적으로 로드되었습니다!')),
+                  _buildVideoPlayer(),
+                  _buildImageGrid(),
+                  _buildAnalysisList(),
+                ],
+              ),
+            )
+          : Center(child: CircularProgressIndicator()),
     );
   }
 }

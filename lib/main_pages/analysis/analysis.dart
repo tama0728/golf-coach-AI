@@ -35,7 +35,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     _initializeCamera();
   }
 
-  Future<void> _initializeCamera([int cameraIdx = 0]) async {
+  Future<void> _initializeCamera([int? cameraIdx]) async {
     // 카메라 권한 요청
     final status = await Permission.camera.request();
     if (status.isDenied) {
@@ -45,8 +45,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
     // 사용 가능한 카메라 목록 가져오기
     _cameras = await availableCameras();
     if (_cameras.isEmpty) return;
-    if (cameraIdx >= _cameras.length) cameraIdx = 0;
-    _selectedCameraIdx = cameraIdx;
+    int frontIdx = _cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.front);
+    int selectedIdx = cameraIdx ?? (frontIdx != -1 ? frontIdx : 0);
+    if (selectedIdx >= _cameras.length) selectedIdx = 0;
+    _selectedCameraIdx = selectedIdx;
     final selectedCamera = _cameras[_selectedCameraIdx];
 
     _controller?.dispose();
@@ -65,15 +67,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
     } catch (e) {
       print('카메라 초기화 실패: $e');
     }
-  }
-
-  void _switchCamera() async {
-    if (_cameras.length < 2) return;
-    int newIdx = (_selectedCameraIdx + 1) % _cameras.length;
-    setState(() {
-      _isCameraInitialized = false;
-    });
-    await _initializeCamera(newIdx);
   }
 
   Future<void> _stopRecording() async {
@@ -286,20 +279,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 height: _controller!.value.previewSize!.width,
                 child: CameraPreview(_controller!),
               ),
-            ),
-          ),
-          // 카메라 전환 버튼 (오른쪽 상단)
-          Positioned(
-            top: 40,
-            right: 24,
-            child: FloatingActionButton(
-              mini: true,
-              heroTag: 'switchCamera',
-              onPressed: _switchCamera,
-              child: Icon(Icons.cameraswitch),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              elevation: 4,
             ),
           ),
           // 안내 문구
