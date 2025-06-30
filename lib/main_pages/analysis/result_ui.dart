@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:golf_coach_app/main_pages/main_page.dart';
 
 class ResultUIPage extends StatelessWidget {
   const ResultUIPage({super.key});
@@ -70,6 +71,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       centerTitle: true,
       iconTheme: const IconThemeData(color: Colors.black87),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => MainPage()),
+                  (route) => false, // 이전 페이지 모두 제거
+            );
+          },
+        ),
+      ],
     );
   }
 }
