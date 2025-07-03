@@ -16,16 +16,16 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // Timer(Duration(seconds: 1), () {
     //   Navigator.of(context).pushReplacement(
-    //     //MaterialPageRoute(builder: (context) => LoginPage()),
-    //     MaterialPageRoute(builder: (context) => MainPage()),
+    //     MaterialPageRoute(builder: (context) => LoginPage()),
+    //     //MaterialPageRoute(builder: (context) => MainPage()),
     //   );
     // });
 
     /// 프레임 그려지고 난 뒤에 바로 pushReplacement 실행
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.of(context).pushReplacement(
-        //MaterialPageRoute(builder: (context) => MainPage()),
-        MaterialPageRoute(builder: (context) => ResultUIPage()),
+        MaterialPageRoute(builder: (context) => MainPage()),
+        //MaterialPageRoute(builder: (context) => ResultUIPage()),
       );
     });
   }
