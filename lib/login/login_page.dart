@@ -22,7 +22,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _pwController = TextEditingController();
 
   final storage = FlutterSecureStorage();
-  bool _isLoading = false;
+  // bool _isLoading = false;
   String? _errorMessage;
 
   // ★ 자동로그인 체크박스 추가
