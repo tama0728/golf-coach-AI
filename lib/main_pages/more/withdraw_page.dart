@@ -1,7 +1,10 @@
-// lib/main_pages/withdraw_page.dart
+// lib/main_pages/more/withdraw_page.dart
 
 import 'package:flutter/material.dart';
-import 'withdraw_complete_page.dart'; // 탈퇴 완료 페이지
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import '../../login/login_page.dart';
 
 class WithdrawPage extends StatefulWidget {
   const WithdrawPage({Key? key}) : super(key: key);
@@ -11,32 +14,73 @@ class WithdrawPage extends StatefulWidget {
 }
 
 class _WithdrawPageState extends State<WithdrawPage> {
-  final TextEditingController _idController = TextEditingController();
-  final TextEditingController _pwController = TextEditingController();
-  String? _errorText;
+  final _storage = const FlutterSecureStorage();
+  bool _isLoading = false;
+  String? token;
+  String? userId;
 
-  @override
-  void dispose() {
-    _idController.dispose();
-    _pwController.dispose();
-    super.dispose();
+  Future<void> _handleWithdraw() async {
+    // 1) 탈퇴 확인 다이얼로그
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('회원탈퇴'),
+        content: const Text('계정을 삭제하면 복구할 수 없습니다.\n정말 탈퇴하시겠습니까?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('탈퇴', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 2) token 가져오기 (로그인 때 저장해두었다고 가정)
+      final token = await _storage.read(key: 'jwt_token');
+      print('탈퇴 시도하는 token=$token');
+      if (token == null) throw 'token 찾을 수 없습니다.';
+
+      // 3) API 호출: DELETE /users/:id
+      final host = dotenv.get('HOSTIP'); // .env: HOSTIP=golf-coach.duckdns.org:3000
+      final url = Uri.parse('http://$host:3000/users/me');
+      print('탈퇴 요청 URL = $url');
+      final resp = await http.delete(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+
+      if (resp.statusCode == 200) {
+        // 4) 토큰 & user_id 삭제
+        await _storage.delete(key: 'jwt_token');
+
+        // 5) 로그인 페이지로 이동 (스택 모두 지움)
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => LoginPage()),
+              (route) => false,
+        );
+      } else {
+        _showError('탈퇴 실패: ${resp.statusCode}');
+      }
+    } catch (e) {
+      _showError('네트워크 오류: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _onConfirm() {
-    final id = _idController.text.trim();
-    final pw = _pwController.text;
-
-    if (id.isEmpty || pw.isEmpty) {
-      setState(() {
-        _errorText = '아이디와 비밀번호를 모두 입력해주세요.';
-      });
-      return;
-    }
-
-    // TODO: 실제 탈퇴 API 호출 후 성공 시
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const WithdrawCompletePage()),
+  void _showError(String msg) {
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(msg),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
+        ],
+      ),
     );
   }
 
@@ -46,89 +90,38 @@ class _WithdrawPageState extends State<WithdrawPage> {
       appBar: AppBar(
         title: const Text('회원탈퇴', style: TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: true,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '회원탈퇴 진행을 위해 아이디 및 비밀번호를\n다시 한 번 입력해주세요',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-
-            // 아이디 입력
-            TextField(
-              controller: _idController,
-              decoration: InputDecoration(
-                hintText: '아이디',
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '계정을 삭제하면 복구할 수 없습니다.\n정말 탈퇴하시겠습니까?',
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // 비밀번호 입력
-            TextField(
-              controller: _pwController,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: '비밀번호',
-                contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // 버튼
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade300,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child:
-                    const Text('취소', style: TextStyle(color: Colors.black87)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    minimumSize: const Size.fromHeight(48),
                   ),
+                  onPressed: _handleWithdraw,
+                  child: const Text('탈퇴하기', style: TextStyle(color: Colors.white)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade200,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child:
-                    const Text('확인', style: TextStyle(color: Colors.black87)),
-                  ),
-                ),
-              ],
-            ),
-
-            // 에러 메시지
-            if (_errorText != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _errorText!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
               ),
             ],
-          ],
+          ),
         ),
       ),
+      backgroundColor: Colors.white,
     );
   }
 }
