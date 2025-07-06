@@ -127,7 +127,20 @@ class _ResultPageState extends State<ResultPage> {
           imageFiles.add(outputFile);
         }
       }
-      setState(() => _imageFiles = imageFiles.take(3).toList());
+      // setState(() => _imageFiles = imageFiles.take(3).toList());
+    //   이미지 파일 하나만 사용
+      final image_top_url = _resultJsonData?['image_top_url'];
+      // log
+      print(image_top_url);
+      final response2 = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_top_url'));
+      final tempDir2 = await getTemporaryDirectory();
+    //   response2.bodyBytes 를 사용하여 이미지 파일 생성
+      final imageFile = File('${tempDir2.path}/image_top.png');
+      await imageFile.writeAsBytes(response2.bodyBytes);
+      setState(() {
+        _imageFiles.insert(0, imageFile); // 첫 번째 이미지로 추가
+        _isZipLoading = false;
+      });
     } catch (e) {
       setState(() => _errorMessage = 'ZIP 처리 오류: $e');
     } finally {
