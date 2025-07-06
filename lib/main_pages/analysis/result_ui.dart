@@ -1,8 +1,159 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:archive/archive.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:golf_coach_app/main_pages/main_page.dart';
 
-class ResultUIPage extends StatelessWidget {
-  const ResultUIPage({super.key});
+class ResultUIPage extends StatefulWidget {
+  final String _videoPath;
+
+  const ResultUIPage(this._videoPath);
+
+  @override
+  _ResultUIPageState createState() => _ResultUIPageState();
+}
+
+class SwingAnalysis {
+  final String swingPart;
+  final String evaluation;
+
+  SwingAnalysis({
+    required this.swingPart,
+    required this.evaluation,
+  });
+
+  factory SwingAnalysis.fromJson(Map<String, dynamic> json) {
+    // print('0, 1: ${json[0]}, ${json[1]}');
+    return SwingAnalysis(
+      swingPart: json['swing_part'] ?? 'Unknown Part',
+      evaluation: json['evaluation'] ?? 'No Evaluation',
+    );
+  }
+}
+class _ResultUIPageState extends State<ResultUIPage> {
+  String? _resultData;
+  Map<String, dynamic>? _resultJsonData;
+  bool _isLoaded = false;
+  String? _errorMessage;
+  VideoPlayerController? _controller;
+  File? _videoFile;
+  String? fileId;
+  List<File> _imageFiles = [];
+  bool _isZipLoading = false;
+  bool _isSwingAnalysis = false;
+  List<SwingAnalysis> _swingAnalysisList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchResultData();
+  }
+
+  Future<void> _downloadAndPlay() async {
+    final url = _resultJsonData?['download_url'] ?? '';
+    if (url.isEmpty) {
+      setState(() {
+        _errorMessage = '다운로드 URL이 없습니다.';
+        _isLoaded = false;
+      });
+      return;
+    }
+    try {
+      final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$url'));
+      final tempDir = await getTemporaryDirectory();
+      final videoPath = '${tempDir.path}/processed_video.mp4';
+      _videoFile = File(videoPath);
+      await _videoFile?.writeAsBytes(response.bodyBytes);
+
+      final controller = VideoPlayerController.file(_videoFile!);
+      // 영상 초기화 및 실패 대응
+      await controller.initialize().catchError((e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = '영상 로딩 실패: $e';
+            _isLoaded = false;
+          });
+        }
+        throw e; // 필요시 주석 처리
+      });
+      if (!mounted) return;
+
+      setState(() {
+        _controller = controller
+          ..play()
+          ..setLooping(true);
+        _isLoaded = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = '영상 다운로드 실패: $e';
+          _isLoaded = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildVideoPlayer() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return const SizedBox();
+    }
+    return Container(
+      // height: MediaQuery.of(context).size.height / 2,
+      width: double.infinity, // 너비를 꽉 채움
+      child: AspectRatio(
+        aspectRatio: _controller!.value.aspectRatio,
+        child: VideoPlayer(_controller!),
+      ),
+    );
+  }
+
+  Future<void> _fetchResultData() async {
+    try {
+      print('Fetching result data for video: ${widget._videoPath}');
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/upload'),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'video',
+          widget._videoPath,
+          contentType: MediaType('video', 'mp4'),
+        ),
+      );
+
+      var response = await request.send();
+      print('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonData = jsonDecode(responseData) as Map<String, dynamic>;
+        setState(() {
+          _resultJsonData = jsonData;
+          _resultData = responseData;
+          _isLoaded = true;
+        });
+        await _downloadAndPlay();
+      } else {
+        setState(() {
+          _errorMessage = '결과 데이터를 받아오지 못했습니다.';
+          _isLoaded = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '오류 발생: $e';
+        _isLoaded = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,24 +170,25 @@ class ResultUIPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  TopTabPage(
+                  ResultTabPage(
+                  comment: '임팩트 좋음',
+                  score: 92,
+                  imagePath: '',
+                  description: '하체 고정 및 체중 이동이 잘 이뤄지고 있습니다.',
+                  ),
+                  ResultTabPage(
                     comment: '좋습니다',
                     score: 90,
                     imagePath: '',
                     description: '상체 회전 좋음',
                   ),
-                  ContactTabPage(
+                  ResultTabPage(
                     comment: '연락점도 괜찮네요',
                     score: 87,
                     imagePath: '',
                     description: '팔의 위치가 안정적으로 유지됩니다.',
                   ),
-                  AddressTabPage(
-                    comment: '임팩트 좋음',
-                    score: 92,
-                    imagePath: '',
-                    description: '하체 고정 및 체중 이동이 잘 이뤄지고 있습니다.',
-                  ),
+
                 ],
               ),
             ),
@@ -97,164 +249,21 @@ class CustomTabBar extends StatelessWidget {
       indicatorColor: Colors.black,
       indicatorSize: TabBarIndicatorSize.tab,
       tabs: [
+        Tab(text: 'ADDRESS'),
         Tab(text: 'TOP'),
         Tab(text: 'CONTACT'),
-        Tab(text: 'ADDRESS'),
       ],
     );
   }
 }
 
-// 각각의 탭 위젯 정의
-
-class TopTabPage extends StatelessWidget {
-  final String comment;
-  final int score;
-  final String imagePath; // 지금은 안 쓰지만 일단 받기만 함
-  final String description;
-
-  const TopTabPage({
-    super.key,
-    required this.comment,
-    required this.score,
-    required this.imagePath,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                comment,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '($score점)',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 250,
-              width: double.infinity,
-              color: Colors.grey[300], // 회색 네모
-              child: const Center(
-                child: Text(
-                  '이미지 자리',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ContactTabPage extends StatelessWidget {
+class ResultTabPage extends StatelessWidget {
   final String comment;
   final int score;
   final String imagePath;
   final String description;
 
-  const ContactTabPage({
-    super.key,
-    required this.comment,
-    required this.score,
-    required this.imagePath,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                comment,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '($score점)',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 250,
-              width: double.infinity,
-              color: Colors.grey[300],
-              child: const Center(
-                child: Text(
-                  '이미지 자리',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AddressTabPage extends StatelessWidget {
-  final String comment;
-  final int score;
-  final String imagePath;
-  final String description;
-
-  const AddressTabPage({
+  const ResultTabPage({
     super.key,
     required this.comment,
     required this.score,
@@ -319,7 +328,6 @@ class AddressTabPage extends StatelessWidget {
 }
 
 // 하단 진단결과보기 버튼
-
 class DiagnosisButtonSection extends StatelessWidget {
   const DiagnosisButtonSection({super.key});
 
@@ -366,7 +374,6 @@ class DiagnosisButtonSection extends StatelessWidget {
 }
 
 // 진단결과 버튼 클릭시 올라오는 바텀시트
-
 class DiagnosisBottomSheet extends StatelessWidget {
   final int score;
   final String videoPath;
@@ -422,18 +429,19 @@ class DiagnosisBottomSheet extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    height: 250,
-                    width: double.infinity,
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Text(
-                        '동영상 자리',
-                        style: TextStyle(color: Colors.black54),
+                      height: 250,
+                      width: double.infinity,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child:
+                        Text(
+                          '동영상 자리',
+                          style: TextStyle(color: Colors.black54),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 20),
             ],
           ),

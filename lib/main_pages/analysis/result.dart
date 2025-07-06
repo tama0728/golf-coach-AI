@@ -8,6 +8,8 @@ import 'package:video_player/video_player.dart';
 import 'package:archive/archive.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:golf_coach_app/main_pages/main_page.dart';
+
 class ResultPage extends StatefulWidget {
   final String _videoPath;
   const ResultPage(this._videoPath);
@@ -51,6 +53,7 @@ class _ResultPageState extends State<ResultPage> {
   File? _videoFile;
   String? fileId;
   List<File> _imageFiles = [];
+  File? _TopImageFile;
   bool _isZipLoading = false;
   bool _isSwingAnalysis = false;
   List<SwingAnalysis> _swingAnalysisList = [];
@@ -127,22 +130,34 @@ class _ResultPageState extends State<ResultPage> {
           imageFiles.add(outputFile);
         }
       }
-      // setState(() => _imageFiles = imageFiles.take(3).toList());
-    //   이미지 파일 하나만 사용
-      final image_top_url = _resultJsonData?['image_top_url'];
-      // log
-      print(image_top_url);
-      final response2 = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_top_url'));
-      final tempDir2 = await getTemporaryDirectory();
-    //   response2.bodyBytes 를 사용하여 이미지 파일 생성
-      final imageFile = File('${tempDir2.path}/image_top.png');
-      await imageFile.writeAsBytes(response2.bodyBytes);
-      setState(() {
-        _imageFiles.insert(0, imageFile); // 첫 번째 이미지로 추가
-        _isZipLoading = false;
-      });
+      setState(() => _imageFiles = imageFiles.take(3).toList());
     } catch (e) {
       setState(() => _errorMessage = 'ZIP 처리 오류: $e');
+    } finally {
+      setState(() => _isZipLoading = true);
+    }
+  }
+
+  Future<void> _downloadTopImage() async {
+    final image_top_url = _resultJsonData?['image_top_url'];
+    if (image_top_url == null || image_top_url.isEmpty) {
+      setState(() => _errorMessage = 'image_top_url이 없습니다');
+      return;
+    }
+
+    try {
+      print(image_top_url);
+      final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_top_url'));
+      final tempDir = await getTemporaryDirectory();
+      //   response2.bodyBytes 를 사용하여 이미지 파일 생성
+      final imageFile = File('${tempDir.path}/image_top.png');
+      await imageFile.writeAsBytes(response.bodyBytes);
+      setState(() {
+        _TopImageFile = imageFile; // Top 이미지 파일 저장
+        // _isZipLoading = false;
+      });
+    } catch (e) {
+      setState(() => _errorMessage = 'image_top_url 처리 오류: $e');
     } finally {
       setState(() => _isZipLoading = true);
     }
@@ -205,6 +220,7 @@ class _ResultPageState extends State<ResultPage> {
         await _downloadAndPlay();
         await _downloadAndExtractZip();
         await _getSwingAnalysis();
+        await _downloadTopImage();
       } else {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
@@ -282,28 +298,306 @@ class _ResultPageState extends State<ResultPage> {
     );
   }
 
+  Widget DiagnosisButtonSection() {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            isScrollControlled: true,
+            builder: (context) => DiagnosisBottomSheet(
+              score: 84
+            )
+        );
+      },
+      child: Container(
+        color: const Color(0xFFE6F5E6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: const [
+            Icon(
+              Icons.arrow_drop_up,
+              color: Colors.black,
+              size: 50,
+            ),
+            Text(
+              '진단결과보기',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget DiagnosisBottomSheet({required int score}) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.8,
+      minChildSize: 0.3,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          color: Colors.white,
+          child: ListView(
+            controller: scrollController,
+            children: [
+              const ColoredBox(
+                color: Color(0xFFE6F5E6),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text(
+                      '진단 결과',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '스윙 점수 : ${score}점',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    // height: 250,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: _buildVideoPlayer(),
+                    // const Center(
+                    //   child:
+                    //   Text(
+                    //     '동영상 자리',
+                    //     style: TextStyle(color: Colors.black54),
+                    //   ),
+                    // ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 모든 데이터가 준비될 때까지 하나의 로딩 아이콘만 표시
-    final isAllLoaded = _isLoaded && _isZipLoading && _isSwingAnalysis;
-    return Scaffold(
-      appBar: AppBar(title: const Text('처리 결과')),
-      body: isAllLoaded
-          ? SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const CustomAppBar(),
+        body: Column(
+          children: [
+            Divider(height: 1, thickness: 1),
+            CustomTabBar(),
+            Divider(height: 1, thickness: 1),
+            Expanded(
+              child: TabBarView(
                 children: [
-                  if (_errorMessage != null)
-                    Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)))
-                  else
-                    Center(child: Text('결과 데이터가 성공적으로 로드되었습니다!')),
-                  _buildVideoPlayer(),
-                  _buildImageGrid(),
-                  _buildAnalysisList(),
+                  ResultTabPage(  // Address
+                    comment: '임팩트 좋음',
+                    score: 92,
+                    imagePath: '',
+                    description: '하체 고정 및 체중 이동이 잘 이뤄지고 있습니다.',
+                    imageFile: _imageFiles.isNotEmpty ? _imageFiles[0] : File(''),  // 첫 번째 이미지 사용
+                  ),
+                  ResultTabPage(  // Top
+                    comment: '좋습니다',
+                    score: 90,
+                    imagePath: '',
+                    description: '상체 회전 좋음',
+                    imageFile: _imageFiles.isNotEmpty ? _imageFiles[1] : File(''),  // 세 번째 이미지 사용
+                  ),
+                  ResultTabPage(  // Contact
+                    comment: '연락점도 괜찮네요',
+                    score: 87,
+                    imagePath: '',
+                    description: '팔의 위치가 안정적으로 유지됩니다.',
+                    imageFile: _imageFiles.isNotEmpty ? _imageFiles[2] : File(''),  // 두 번째 이미지 사용
+                  ),
+
                 ],
               ),
-            )
-          : Center(child: CircularProgressIndicator()),
+            ),
+            DiagnosisButtonSection(),
+          ],
+        ),
+      ),
+    );
+    // // 모든 데이터가 준비될 때까지 하나의 로딩 아이콘만 표시
+    // final isAllLoaded = _isLoaded && _isZipLoading && _isSwingAnalysis;
+    // return Scaffold(
+    //   appBar: AppBar(title: const Text('처리 결과')),
+    //   body: isAllLoaded
+    //       ? SingleChildScrollView(
+    //           child: Column(
+    //             crossAxisAlignment: CrossAxisAlignment.stretch,
+    //             children: [
+    //               if (_errorMessage != null)
+    //                 Center(child: Text(_errorMessage!, style: TextStyle(color: Colors.red)))
+    //               else
+    //                 Center(child: Text('결과 데이터가 성공적으로 로드되었습니다!')),
+    //               _buildVideoPlayer(),
+    //               _buildImageGrid(),
+    //               _buildAnalysisList(),
+    //             ],
+    //           ),
+    //         )
+    //       : Center(child: CircularProgressIndicator()),
+    // );
+  }
+}
+// ================= AppBar 위젯 =================
+class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const CustomAppBar({super.key});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(70);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      toolbarHeight: 70,
+      title: const Text(
+        '분석결과',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      ),
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+      iconTheme: const IconThemeData(color: Colors.black87),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => MainPage()),
+                  (route) => false, // 이전 페이지 모두 제거
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ================= TabBar 위젯 =================
+class CustomTabBar extends StatelessWidget {
+  const CustomTabBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const TabBar(
+      labelColor: Colors.black,
+      indicatorColor: Colors.black,
+      indicatorSize: TabBarIndicatorSize.tab,
+      tabs: [
+        Tab(text: 'ADDRESS'),
+        Tab(text: 'TOP'),
+        Tab(text: 'CONTACT'),
+      ],
+    );
+  }
+}
+
+// ================= Motion Result 위젯 =================
+class ResultTabPage extends StatelessWidget {
+  final String comment;
+  final int score;
+  final String imagePath;
+  final String description;
+  final File imageFile;
+
+  const ResultTabPage({
+    super.key,
+    required this.comment,
+    required this.score,
+    required this.imagePath,
+    required this.description,
+    required this.imageFile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                comment,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '($score점)',
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              // height: 250,
+              width: double.infinity,
+              color: Colors.grey[300],
+              child: Center(
+                child: Image.file(imageFile, width: double.infinity, fit: BoxFit.contain),
+                // Text(
+                //   '이미지 자리',
+                //   style: TextStyle(color: Colors.black54),
+                // ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

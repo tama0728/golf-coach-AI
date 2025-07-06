@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:golf_coach_app/main_pages/analysis/result_ui.dart';
 import 'home/home.dart';
 import 'tutorial/tutorial.dart';
 import 'analysis/analysis.dart';
@@ -19,8 +18,8 @@ class _MainPageState extends State<MainPage> {
   final List<Widget> _pages = [
     HomePage(),
     TutorialPage(),
-    //AnalysisPage(),
-    ResultUIPage(),
+    AnalysisPage(),
+    // ResultUIPage(),
     MyPage(),
     MorePage(),
   ];
