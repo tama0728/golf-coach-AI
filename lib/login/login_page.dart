@@ -50,8 +50,8 @@ class _LoginPageState extends State<LoginPage> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'userEmail': id,
-          'password': pw
+          'user_email': id,
+          'user_pw': pw
         }),
       );
 
