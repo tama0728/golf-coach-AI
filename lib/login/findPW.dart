@@ -69,7 +69,7 @@ class _FindPWPageState extends State<FindPWPage> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'userEmail': email,
+          'user_email': email,
           'userName': name,
           'phoneNum': phone,
           'newPassword': newPw,

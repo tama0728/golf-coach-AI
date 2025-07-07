@@ -7,12 +7,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:archive/archive.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:math' as math;
 
 import 'package:golf_coach_app/main_pages/main_page.dart';
 
 class ResultPage extends StatefulWidget {
   final String _videoPath;
-  const ResultPage(this._videoPath);
+  final bool isFrontCamera;
+  const ResultPage(this._videoPath, {required this.isFrontCamera});
 
   @override
   _ResultPageState createState() => _ResultPageState();
@@ -306,13 +308,23 @@ class _ResultPageState extends State<ResultPage> {
     if (_controller == null || !_controller!.value.isInitialized) {
       return const SizedBox();
     }
+    Widget player = AspectRatio(
+      aspectRatio: _controller!.value.aspectRatio,
+      child: VideoPlayer(_controller!),
+    );
+
+    // 전면 카메라로 촬영한 영상만 좌우 반전
+    if (widget.isFrontCamera) {
+      player = Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationY(math.pi),
+        child: player,
+      );
+    }
+
     return Container(
-      // height: MediaQuery.of(context).size.height / 2,
-      width: double.infinity, // 너비를 꽉 채움
-      child: AspectRatio(
-        aspectRatio: _controller!.value.aspectRatio,
-        child: VideoPlayer(_controller!),
-      ),
+      width: double.infinity,
+      child: player,
     );
   }
 
