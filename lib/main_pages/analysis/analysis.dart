@@ -174,7 +174,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   trimmer: _trimmer!,
                   viewerHeight: 50.0,
                   viewerWidth: MediaQuery.of(context).size.width,
-                  maxVideoLength: const Duration(seconds: 5),
+                  maxVideoLength: const Duration(seconds: 60),
                   // numberOfFrames: 60,
                   onChangeStart: (value) async {
                     setState(() => _startTrim = value);

@@ -1,8 +1,8 @@
-// 수정: lib/main_pages/account.dart
+// lib/main_pages/account.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../login/login_page.dart';   // ← 상대경로 주의!
+import '../../login/login_page.dart';
 import '../more/withdraw_page.dart';
 
 final storage = FlutterSecureStorage();
@@ -10,37 +10,37 @@ final storage = FlutterSecureStorage();
 class AccountPage extends StatelessWidget {
   const AccountPage({Key? key}) : super(key: key);
 
-  Future<void> _logout(BuildContext context) async {
-    // 로그아웃: 저장된 토큰 등 삭제
-    await storage.delete(key: 'jwt_token');
-    // 로그인 페이지로 이동 (이전 스택 모두 삭제)
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginPage()),
-          (route) => false,
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
+  // 로그아웃 다이얼로그 함수
+  Future<void> _showLogoutDialog(BuildContext context) async {
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('로그아웃'),
-        content: Text('정말 로그아웃 하시겠습니까?'),
+        content: Text('정말 로그아웃하시겠습니까?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
             child: Text('취소'),
+            onPressed: () => Navigator.of(context).pop(false),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context); // 다이얼로그 닫기
-              _logout(context); // 로그아웃 처리
-            },
-            child: Text('로그아웃', style: TextStyle(color: Colors.red)),
+            child: Text('확인'),
+            onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
       ),
     );
+
+    if (confirm == true) {
+      final token = await storage.read(key: 'jwt_token');
+      print('[AccountPage] 삭제 전 토큰: $token');
+      await storage.delete(key: 'jwt_token');
+      await storage.write(key: 'auto_login', value: 'false');
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+            (route) => false,
+      );
+    }
   }
 
   @override
