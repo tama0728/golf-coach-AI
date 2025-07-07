@@ -284,13 +284,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
               child: SizedBox(
                 width: _controller!.value.previewSize!.height,
                 height: _controller!.value.previewSize!.width,
-                child: Platform.isIOS
-                    ? Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.rotationY(math.pi),
-                        child: CameraPreview(_controller!),
-                      )
-                    : CameraPreview(_controller!),
+                child:
+                  // Platform.isIOS ? Transform(
+                  //         alignment: Alignment.center,
+                  //         transform: Matrix4.rotationY(math.pi),
+                  //         child: CameraPreview(_controller!),
+                  //       ) :
+                CameraPreview(_controller!),
               ),
             ),
           ),
