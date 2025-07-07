@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:video_trimmer/video_trimmer.dart';
 import 'result.dart';
+import 'dart:math' as math;
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -36,9 +37,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> _initializeCamera([int? cameraIdx]) async {
-    // 카메라 권한 요청
-    final status = await Permission.camera.request();
-    if (status.isDenied) {
+    // 카메라 및 마이크 권한 요청
+    final cameraStatus = await Permission.camera.request();
+    final audioStatus = await Permission.microphone.request();
+    if (cameraStatus.isDenied || audioStatus.isDenied) {
       return;
     }
 
@@ -122,6 +124,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     _timer?.cancel();  // 타이머 정리
     _controller?.dispose();
     _videoController?.dispose();
+    _trimmer?.dispose(); // 트리머 리소스 해제 추가
     super.dispose();
   }
 
@@ -227,18 +230,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     );
                                     print('트리밍 완료: $outputPath');
                                     _videoPath = outputPath;
+                                    // 트리밍이 성공적으로 끝난 후에만 이동
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ResultPage(
+                                          _videoPath!,
+                                          isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
+                                        ),
+                                      ),
+                                    );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('트리밍 실패!')),
                                     );
                                   }
                                 },
-                              );
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ResultPage(_videoPath!),
-                                ),
                               );
                             },
                       child: Text(
@@ -277,7 +284,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
               child: SizedBox(
                 width: _controller!.value.previewSize!.height,
                 height: _controller!.value.previewSize!.width,
-                child: CameraPreview(_controller!),
+                child: Platform.isIOS
+                    ? Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(math.pi),
+                        child: CameraPreview(_controller!),
+                      )
+                    : CameraPreview(_controller!),
               ),
             ),
           ),
