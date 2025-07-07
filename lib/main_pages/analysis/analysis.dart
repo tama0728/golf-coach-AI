@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'package:video_player/video_player.dart';
@@ -77,11 +78,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
     try {
       final XFile video = await _controller!.stopVideoRecording();
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final String newPath = '${appDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final File newVideo = await File(video.path).copy(newPath);
       setState(() {
         _isRecording = false;
         _timer?.cancel();
         _recordingDuration = Duration.zero;
-        _videoPath = video.path;
+        _videoPath = newPath;
         _isEditing = true;
       });
       _trimmer = Trimmer();
