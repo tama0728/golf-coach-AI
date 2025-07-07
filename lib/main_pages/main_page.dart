@@ -19,7 +19,6 @@ class _MainPageState extends State<MainPage> {
     HomePage(),
     TutorialPage(),
     AnalysisPage(),
-    // ResultUIPage(),
     MyPage(),
     MorePage(),
   ];

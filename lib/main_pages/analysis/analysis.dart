@@ -6,7 +6,6 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:video_trimmer/video_trimmer.dart';
 import 'result.dart';
-import 'package:golf_coach_app/main_pages/analysis/result_ui.dart';
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -239,7 +238,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => ResultPage(_videoPath!),
-                                  // builder: (context) => ResultUIPage(_videoPath!),
                                 ),
                               );
                             },

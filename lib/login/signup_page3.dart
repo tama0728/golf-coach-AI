@@ -43,13 +43,10 @@ class _SignupPage3State extends State<SignupPage3> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "id":widget.id,
-          "password":widget.pw,
-          "userEmail":widget.email,
-          "userName":userName,
-          "phoneNum":widget.phoneNum,
-          "userHeight":userHeight,
-          "userHand":userHand
+          "user_email":widget.email,
+          "user_pw":widget.pw,
+          "user_name":userName,
+          "location_agree":null // 위치동의값을 추후 실제 값으로 대체
         }),
       );
 

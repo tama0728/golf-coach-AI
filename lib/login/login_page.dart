@@ -53,8 +53,8 @@ class _LoginPageState extends State<LoginPage> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'userEmail': id,
-          'password': pw
+          'user_email': id,
+          'user_pw': pw
         }),
       );
 
@@ -124,15 +124,15 @@ class _LoginPageState extends State<LoginPage> {
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/image1.png'),
+          image: AssetImage('assets/image1.png'), // 배경 이미지
           fit: BoxFit.fitHeight,
         ),
       ),
       child: Scaffold(
-        resizeToAvoidBottomInset: true,
+        resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 밀리게 함
         backgroundColor: Colors.transparent,
         body: Center(
-          child: SingleChildScrollView(
+          child: SingleChildScrollView( // 키보드 때문에 overflow 방지
             child: SizedBox(
               height: MediaQuery.of(context).size.height,
               child: Container(

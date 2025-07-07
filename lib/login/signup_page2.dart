@@ -42,13 +42,13 @@ class _SignupPage2State extends State<SignupPage2> {
 
     print('아이디: $id');
 
-    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/checkId');
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/check-id');
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'id': id,
+          'user_email': id,
         }),
       );
 

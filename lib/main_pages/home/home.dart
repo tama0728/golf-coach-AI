@@ -4,6 +4,8 @@ import '../analysis/analysis.dart';
 import '../main_page.dart';
 import '../more/notice.dart';
 import '../more/notice_detail_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,27 +46,65 @@ class _HomePageState extends State<HomePage> {
     {'title': '공지사항 3', 'date': '2024.03.15'},
   ];
 
-  // 추천 영상 데이터
-  final List<VideoModel> recommendedVideos = [
-    VideoModel(
-      title: '골프 스윙의 기본',
-      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
-      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
-      description: '골프 스윙의 기본 자세와 동작을 배워보세요.',
-    ),
-    VideoModel(
-      title: '골프 스윙 교정',
-      thumbnailUrl: 'https://img.youtube.com/vi/jWQx2f-CErU/maxresdefault.jpg',
-      videoUrl: 'https://www.youtube.com/watch?v=jWQx2f-CErU',
-      description: '스윙 자세 교정 방법',
-    ),
-    VideoModel(
-      title: '골프 스윙 분석',
-      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
-      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
-      description: '스윙 분석과 피드백',
-    ),
+  // 추천 영상 URL만 저장
+  final List<String> recommendedVideoUrls = [
+    'https://www.youtube.com/watch?v=cYhctBZPzGQ',
+    'https://www.youtube.com/watch?v=xQn_Jz2hKKs&list=RDxQn_Jz2hKKs&start_radio=1',
+    'https://www.youtube.com/watch?v=XgCiK1-iSY8',
   ];
+
+  // 실제 표시할 추천 영상 정보
+  List<VideoModel> recommendedVideos = [];
+
+  final ScrollController _videoScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecommendedVideos();
+  }
+
+  @override
+  void dispose() {
+    _videoScrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchRecommendedVideos() async {
+    List<VideoModel> videos = [];
+    for (final url in recommendedVideoUrls) {
+      try {
+        final oembedUrl = 'https://www.youtube.com/oembed?url=$url&format=json';
+        final response = await http.get(Uri.parse(oembedUrl));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          videos.add(VideoModel(
+            title: data['title'] ?? '',
+            thumbnailUrl: data['thumbnail_url'] ?? '',
+            videoUrl: url,
+            description: data['author_name'] ?? '',
+          ));
+        } else {
+          videos.add(VideoModel(
+            title: '제목을 불러올 수 없음',
+            thumbnailUrl: '',
+            videoUrl: url,
+            description: '',
+          ));
+        }
+      } catch (e) {
+        videos.add(VideoModel(
+          title: '제목을 불러올 수 없음',
+          thumbnailUrl: '',
+          videoUrl: url,
+          description: '',
+        ));
+      }
+    }
+    setState(() {
+      recommendedVideos = videos;
+    });
+  }
 
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
@@ -136,7 +176,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 
   Widget _buildNoticeSection() {
     return Container(
@@ -407,98 +446,105 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 12),
         SizedBox(
           height: 160,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: recommendedVideos.length,
-            itemBuilder: (context, index) {
-              final video = recommendedVideos[index];
-              return GestureDetector(
-                onTap: () async {
-                  final Uri url = Uri.parse(video.videoUrl);
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Container(
-                  width: 240,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: mainColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(12)),
-                            child: Image.network(
-                              video.thumbnailUrl,
-                              height: 100,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  height: 100,
-                                  color: Colors.grey[300],
-                                  child:
-                                      const Icon(Icons.video_library, size: 40),
-                                );
-                              },
-                            ),
-                          ),
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.3),
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(12)),
+          child: Scrollbar(
+            controller: _videoScrollController,
+            thumbVisibility: true,
+            interactive: true,
+            child: ListView.builder(
+              controller: _videoScrollController,
+              scrollDirection: Axis.horizontal,
+              itemCount: recommendedVideos.length,
+              itemBuilder: (context, index) {
+                final video = recommendedVideos[index];
+                return GestureDetector(
+                  onTap: () async {
+                    final Uri url = Uri.parse(video.videoUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: Container(
+                    width: 240,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: mainColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(12)),
+                              child: Image.network(
+                                video.thumbnailUrl,
+                                height: 100,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 100,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.video_library,
+                                        size: 40),
+                                  );
+                                },
                               ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.play_circle_outline,
-                                  color: Colors.white,
-                                  size: 36,
+                            ),
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.3),
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12)),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: Colors.white,
+                                    size: 36,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              video.title,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              video.description,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ],
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                video.title,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                video.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ],
