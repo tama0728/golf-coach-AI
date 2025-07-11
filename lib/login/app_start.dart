@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -29,6 +31,9 @@ class _SplashScreenState extends State<SplashScreen> {
         final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/check-token');
         final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
         debugPrint('[SplashScreen] check-token: ${response.statusCode}, ${response.body}');
+        final email = jsonDecode(response.body)['user']['user_email'];
+        debugPrint('[SplashScreen] 이메일: $email');
+        await storage.write(key: 'email', value: email);
         if (response.statusCode == 200) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainPage()));
           return;

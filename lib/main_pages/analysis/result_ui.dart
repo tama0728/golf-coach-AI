@@ -21,138 +21,48 @@ class ResultUIPage extends StatefulWidget {
 
 class SwingAnalysis {
   final String swingPart;
+  final String posture;
   final String evaluation;
 
   SwingAnalysis({
     required this.swingPart,
+    required this.posture,
     required this.evaluation,
   });
 
   factory SwingAnalysis.fromJson(Map<String, dynamic> json) {
-    // print('0, 1: ${json[0]}, ${json[1]}');
     return SwingAnalysis(
       swingPart: json['swing_part'] ?? 'Unknown Part',
+      posture: json['posture'] ?? 'No Posture',
       evaluation: json['evaluation'] ?? 'No Evaluation',
     );
   }
 }
+
 class _ResultUIPageState extends State<ResultUIPage> {
-  String? _resultData;
   Map<String, dynamic>? _resultJsonData;
   bool _isLoaded = false;
   String? _errorMessage;
   VideoPlayerController? _controller;
   File? _videoFile;
   String? fileId;
-  List<File> _imageFiles = [];
-  bool _isZipLoading = false;
+
+  File _addressImageFile = File('');
+  File _topImageFile = File('');
+  File _contactImageFile = File('');
+
+  bool _isAddressImageLoading = false;
+  bool _isTopImageLoading = false;
+  bool _isContactImageLoading = false;
+
+  // bool _isZipLoading = false;
   bool _isSwingAnalysis = false;
   List<SwingAnalysis> _swingAnalysisList = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchResultData();
-  }
-
-  Future<void> _downloadAndPlay() async {
-    final url = _resultJsonData?['download_url'] ?? '';
-    if (url.isEmpty) {
-      setState(() {
-        _errorMessage = '다운로드 URL이 없습니다.';
-        _isLoaded = false;
-      });
-      return;
-    }
-    try {
-      final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$url'));
-      final tempDir = await getTemporaryDirectory();
-      final videoPath = '${tempDir.path}/processed_video.mp4';
-      _videoFile = File(videoPath);
-      await _videoFile?.writeAsBytes(response.bodyBytes);
-
-      final controller = VideoPlayerController.file(_videoFile!);
-      // 영상 초기화 및 실패 대응
-      await controller.initialize().catchError((e) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = '영상 로딩 실패: $e';
-            _isLoaded = false;
-          });
-        }
-        throw e; // 필요시 주석 처리
-      });
-      if (!mounted) return;
-
-      setState(() {
-        _controller = controller
-          ..play()
-          ..setLooping(true);
-        _isLoaded = true;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = '영상 다운로드 실패: $e';
-          _isLoaded = false;
-        });
-      }
-    }
-  }
-
-  Widget _buildVideoPlayer() {
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return const SizedBox();
-    }
-    return Container(
-      // height: MediaQuery.of(context).size.height / 2,
-      width: double.infinity, // 너비를 꽉 채움
-      child: AspectRatio(
-        aspectRatio: _controller!.value.aspectRatio,
-        child: VideoPlayer(_controller!),
-      ),
-    );
-  }
-
-  Future<void> _fetchResultData() async {
-    try {
-      print('Fetching result data for video: ${widget._videoPath}');
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/upload'),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'video',
-          widget._videoPath,
-          contentType: MediaType('video', 'mp4'),
-        ),
-      );
-
-      var response = await request.send();
-      print('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final responseData = await response.stream.bytesToString();
-        final jsonData = jsonDecode(responseData) as Map<String, dynamic>;
-        setState(() {
-          _resultJsonData = jsonData;
-          _resultData = responseData;
-          _isLoaded = true;
-        });
-        await _downloadAndPlay();
-      } else {
-        setState(() {
-          _errorMessage = '결과 데이터를 받아오지 못했습니다.';
-          _isLoaded = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = '오류 발생: $e';
-        _isLoaded = false;
-      });
-    }
+    // _fetchResultData();
   }
 
   @override
@@ -163,32 +73,28 @@ class _ResultUIPageState extends State<ResultUIPage> {
         backgroundColor: Colors.white,
         appBar: const CustomAppBar(),
         body: Column(
-          children: const [
+          children: [
             Divider(height: 1, thickness: 1),
             CustomTabBar(),
             Divider(height: 1, thickness: 1),
             Expanded(
               child: TabBarView(
                 children: [
-                  ResultTabPage(
-                  comment: '임팩트 좋음',
-                  score: 92,
-                  imagePath: '',
-                  description: '하체 고정 및 체중 이동이 잘 이뤄지고 있습니다.',
+                  ResultTabPage(  // Address
+                      part: 'ADDRESS',
+                      imageFile: _addressImageFile ?? File(''),
+                      swingAnalysisList: _swingAnalysisList.where((analysis) => analysis.swingPart == 'ADDRESS').toList()
                   ),
-                  ResultTabPage(
-                    comment: '좋습니다',
-                    score: 90,
-                    imagePath: '',
-                    description: '상체 회전 좋음',
+                  ResultTabPage(  // Top
+                      part: 'TOP',
+                      imageFile: _topImageFile ?? File(''),
+                      swingAnalysisList: _swingAnalysisList.where((analysis) => analysis.swingPart == 'TOP').toList()
                   ),
-                  ResultTabPage(
-                    comment: '연락점도 괜찮네요',
-                    score: 87,
-                    imagePath: '',
-                    description: '팔의 위치가 안정적으로 유지됩니다.',
+                  ResultTabPage(  // Contact
+                      part: 'CONTACT',
+                      imageFile: _contactImageFile ?? File(''),
+                      swingAnalysisList: _swingAnalysisList.where((analysis) => analysis.swingPart == 'CONTACT').toList()
                   ),
-
                 ],
               ),
             ),
@@ -257,23 +163,62 @@ class CustomTabBar extends StatelessWidget {
   }
 }
 
+// ================= Motion Result 위젯 =================
 class ResultTabPage extends StatelessWidget {
-  final String comment;
-  final int score;
-  final String imagePath;
-  final String description;
+  final String part;
+  final File imageFile;
+  final List<SwingAnalysis> swingAnalysisList;
+  late final String comment;
+  late final double score;
 
-  const ResultTabPage({
+  ResultTabPage({
     super.key,
-    required this.comment,
-    required this.score,
-    required this.imagePath,
-    required this.description,
-  });
+    required this.part,
+    required this.imageFile,
+    required this.swingAnalysisList,
+  }) {
+    var score_table = {
+      'correct_midpoint': 15,
+      'correct_arm_angle': 20,
+      'correct_pelvis': 25,
+      'correct_head': 15,
+      'correct_shoulder_ankle': 15,
+      'correct_knee_angle': 10
+    };
+
+    double totalScore = 0;
+    double maxScore = 0;
+    for (final analysis in swingAnalysisList) {
+      // 예시: 각 스윙 파트에 따라 점수를 계산
+      if (analysis.evaluation.contains('정확')) {
+        totalScore += score_table[analysis.posture] ?? 0;
+      } else {
+        maxScore += score_table[analysis.posture] ?? 0;
+      }
+    }
+    maxScore += totalScore;
+    if (totalScore != 0) {
+      totalScore = (totalScore / maxScore) * 100; // 백분율로 변환
+    }
+    print('Total Score: $totalScore');
+
+    String tempComment = '스윙 분석 결과: ';
+    if (totalScore >= 80) {
+      tempComment += '훌륭합니다!';
+    } else if (totalScore >= 50) {
+      tempComment += '좋습니다.';
+    } else if (totalScore >= 30) {
+      tempComment += '보통입니다.';
+    } else {
+      tempComment += '개선이 필요합니다.';
+    }
+    score = totalScore;
+    comment = tempComment;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,31 +247,32 @@ class ResultTabPage extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              height: 250,
+              // height: 250,
               width: double.infinity,
               color: Colors.grey[300],
-              child: const Center(
-                child: Text(
-                  '이미지 자리',
-                  style: TextStyle(color: Colors.black54),
-                ),
+              child: Center(
+                child: Image.file(imageFile, width: double.infinity, fit: BoxFit.contain),
+                // Text(
+                //   '이미지 자리',
+                //   style: TextStyle(color: Colors.black54),
+                // ),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
+          for (final analysis in swingAnalysisList)
+            Text(
+              analysis.evaluation,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
-
 // 하단 진단결과보기 버튼
 class DiagnosisButtonSection extends StatelessWidget {
   const DiagnosisButtonSection({super.key});

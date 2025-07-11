@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
@@ -7,7 +11,11 @@ import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:video_trimmer/video_trimmer.dart';
 import 'result.dart';
+import 'process.dart';
 import 'dart:math' as math;
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -27,6 +35,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
   double _endTrim = 0.0;
   Trimmer? _trimmer;
   bool _isTrimming = false;
+  String? _fileId;
+  Map<String, dynamic>? _resultJsonData;
+  bool _isLoaded = false;
+  String? _errorMessage;
 
   List<CameraDescription> _cameras = [];
   int _selectedCameraIdx = 0;
@@ -161,13 +173,21 @@ class _AnalysisPageState extends State<AnalysisPage> {
               // 영상 미리보기(화면 전체, 비율 유지, 잘림 없이)
               Positioned.fill(
                 child: FittedBox(
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,  // 비율 유지
                   child: SizedBox(
                     width: videoSize.width,
                     height: videoSize.height,
                     child: VideoViewer(trimmer: _trimmer!),
                   ),
                 ),
+                // child: FittedBox(
+                //   fit: BoxFit.cover,
+                //   child: SizedBox(
+                //     width: videoSize.width,
+                //     height: videoSize.height,
+                //     child: VideoViewer(trimmer: _trimmer!),
+                //   ),
+                // ),
               ),
               // TrimViewer (하단 오버레이)
               Positioned(
@@ -179,6 +199,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   viewerHeight: 50.0,
                   viewerWidth: MediaQuery.of(context).size.width,
                   maxVideoLength: const Duration(seconds: 60),
+                  showDuration: true,
+                  paddingFraction: 0.01,
                   // numberOfFrames: 60,
                   onChangeStart: (value) async {
                     setState(() => _startTrim = value);
@@ -237,12 +259,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     // 트리밍이 성공적으로 끝난 후에만 이동
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ResultPage(
-                                          _videoPath!,
-                                          isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
-                                        ),
-                                      ),
+                                      fetchResultData() as Route<Object?>,
+                                      // MaterialPageRoute(
+                                      //   builder: (context) =>
+                                      //   //   ProcessPage(
+                                      //   //     _videoPath!,
+                                      //   //     isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
+                                      //   // ),
+                                      // ),
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -368,4 +392,74 @@ class _AnalysisPageState extends State<AnalysisPage> {
       ),
     );
   }
+
+  Future<void> fetchResultData() async {
+    try {
+      print('Fetching result data for video: $_videoPath');
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/upload'),
+      );
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'video',
+          _videoPath!,
+          contentType: MediaType('video', 'mp4'),
+        ),
+      );
+
+      var response = await request.send();
+      print('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonData = jsonDecode(responseData) as Map<String, dynamic>;
+        setState(() {
+          _resultJsonData = jsonData;
+          _isLoaded = true;
+        });
+        _fileId = jsonData['file_id'] ?? '';
+        try {
+          final url = 'http://${dotenv.get('HOSTIP')}:3000/api/analysis/upload';
+          print('File ID: $_fileId');
+          print("Response Data: $jsonData");
+          final response = await http.post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              "analysis_id" : _fileId,
+              "user_email" : await FlutterSecureStorage().read(key: 'email') ?? '',
+              "analysis_video_path" : jsonData['video_url'] ?? '',
+              "analysis_address_path" : jsonData['image_address_url'] ?? '',
+              "analysis_top_path" : jsonData['image_top_url'] ?? '',
+              "analysis_contact_path" : jsonData['image_contact_url'] ?? '',
+              "analysis_result_json" : jsonData['swing_analysis'] ?? {},
+              "analysis_score" : jsonData['score'] ?? 0,
+              "analysis_score_url" : jsonData['score_url'] ?? 0,
+            }),
+          );
+
+          if (response.statusCode == 201) {
+            print('Analysis info uploaded successfully');
+          } else {
+            print('Failed to upload analysis info: ${response.statusCode}, ${response.body}');
+          }
+        } catch (e) {
+          print('Error uploading analysis info: $e');
+        }
+
+      } else {
+        setState(() {
+          _errorMessage = '결과 데이터를 받아오지 못했습니다.';
+          // _isLoaded = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '오류 발생: $e';
+        // _isLoaded = false;
+      });
+    }
+  }
 }
+
