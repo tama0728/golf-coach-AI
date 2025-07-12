@@ -91,19 +91,23 @@ class _SignupPage1State extends State<SignupPage1> {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: () {
-              if (agree1 && agree2) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignupPage2()),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('필수 약관에 모두 동의해주세요.')),
-                );
-              }
-            },
-            child: Text('다음으로'),
+            onPressed: (agree1 && agree2)
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SignupPage2()),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: (agree1 && agree2) ? Color(0xFF6750A4) : null,
+              foregroundColor: Colors.white,
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            child: const Text('다음으로'),
           ),
         ),
       ),

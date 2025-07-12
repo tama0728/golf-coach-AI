@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'signup_page3.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'bloc.dart';
 import 'package:email_validator/email_validator.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
+import 'login_page.dart';
 
 class SignupPage2 extends StatefulWidget {
   @override
@@ -20,6 +20,12 @@ class _SignupPage2State extends State<SignupPage2> {
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
   final _phoneController = TextEditingController(text: '010');
+  final _userNameController = TextEditingController();
+
+  String? _battingDirection; // '좌' or '우'
+  String? user_nickname;
+  int? batting_side;
+  String? _userNameError;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -34,7 +40,6 @@ class _SignupPage2State extends State<SignupPage2> {
   String? user_pw;
   String? phone_num;
   String? _code;
-  String? user_nickname;
 
   // handel id  // 아이디 중복확인
   Future<void> _handleCheckEmail() async {
@@ -281,6 +286,135 @@ class _SignupPage2State extends State<SignupPage2> {
     return '${input.substring(0,3)}-${input.substring(3,7)}-${input.substring(7,11)}';
   }
 
+  // 닉네임 중복확인 함수
+  Future<void> _handleCheckUserName() async {
+    final userNickname = _userNameController.text.trim();
+    user_nickname = userNickname;
+    if (userNickname.isEmpty) {
+      setState(() {
+        _userNameError = '닉네임을 입력하세요.';
+      });
+      return;
+    }
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/check-username');
+    setState(() {
+      _isLoading = true;
+      _userNameError = null;
+    });
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_nickname': userNickname}),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _userNameError = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('사용 가능한 닉네임입니다.')),
+        );
+      } else {
+        setState(() {
+          _userNameError = '이미 사용 중인 닉네임입니다.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_userNameError!)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _userNameError = '네트워크 오류: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_userNameError!)),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // 회원가입 처리 함수
+  Future<void> _handleSignup() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    user_email = _emailController.text.trim();
+    user_pw = _pwController.text.trim();
+    phone_num = _phoneController.text.trim();
+    user_nickname = _userNameController.text.trim();
+    batting_side = _battingDirection == '좌' ? 1 : 0;
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/signup');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "user_email": user_email,
+          "user_pw": user_pw,
+          "user_nickname": user_nickname,
+          "phone_num": phone_num,
+          "batting_side": batting_side
+        }),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해 주세요.')),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginPage()),
+        );
+        return;
+      } else {
+        setState(() {
+          _errorMessage = '회원가입 실패: \\${jsonDecode(response.body)['error']}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '네트워크 오류: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+    // error popup
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text(_errorMessage ?? 'Unknown error'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 모든 유효성 검사 통과 여부 확인 함수
+  bool _isFormValid() {
+    return _isEmailValid &&
+        _pwController.text.isNotEmpty &&
+        _pwCheckController.text.isNotEmpty &&
+        _passwordError == null &&
+        // _codeController.text.isNotEmpty && // 이메일 인증번호 입력 주석처리
+        _phoneController.text.replaceAll('-', '').length == 11 &&
+        _userNameController.text.isNotEmpty &&
+        _userNameError == null &&
+        _battingDirection != null;
+  }
+
 
     @override
   Widget build(BuildContext context) {
@@ -291,7 +425,7 @@ class _SignupPage2State extends State<SignupPage2> {
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            // 이메일 버튼 콜백 변수 선언
+            // 1. 이메일
             (() {
               VoidCallback? emailButtonCallback;
               if (_emailFormatError == null && _emailController.text.isNotEmpty) {
@@ -314,6 +448,21 @@ class _SignupPage2State extends State<SignupPage2> {
                   style: TextStyle(color: Colors.red, fontSize: 13),
                 ),
               ),
+            // 2. 인증번호 입력
+            // _buildTextFieldWithButton(
+            //   _codeController,
+            //   '인증번호 입력',
+            //   '확인',
+            //   null, // 버튼 콜백 없음
+            // ),
+            TextField(
+              controller: _codeController,
+              decoration: InputDecoration(
+                labelText: '인증번호 입력',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            // 3. 비밀번호
             TextField(
               controller: _pwController,
               obscureText: true,
@@ -323,10 +472,13 @@ class _SignupPage2State extends State<SignupPage2> {
                 errorText: _passwordError,
               ),
               onChanged: (value) {
-                _validatePasswords();
+                setState(() {
+                  _validatePasswords();
+                });
               },
             ),
             SizedBox(height: 16),
+            // 4. 비밀번호 확인
             TextField(
               controller: _pwCheckController,
               obscureText: true,
@@ -336,16 +488,13 @@ class _SignupPage2State extends State<SignupPage2> {
                 errorText: _passwordError,
               ),
               onChanged: (value) {
-                _validatePasswords();
+                setState(() {
+                  _validatePasswords();
+                });
               },
             ),
             SizedBox(height: 16),
-            _buildTextFieldWithButton(
-              _codeController,
-              '인증번호 입력',
-              '확인',
-              _handleVerifyCode,
-            ),
+            // 5. 휴대폰번호
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.number,
@@ -357,34 +506,85 @@ class _SignupPage2State extends State<SignupPage2> {
                 border: OutlineInputBorder(),
               ),
               onChanged: (value) {
-                // 010은 고정, 나머지 8자리만 입력 가능
-                String numbers = value.replaceAll(RegExp(r'[^0-9]'), '');
-                if (!numbers.startsWith('010')) {
-                  numbers = '010' + numbers.replaceFirst(RegExp(r'^0*'), '');
-                }
-                if (numbers.length < 3) {
-                  numbers = '010';
-                }
-                if (numbers.length > 11) {
-                  numbers = numbers.substring(0, 11);
-                }
-                String formatted = numbers;
-                if (numbers.length > 3 && numbers.length <= 7) {
-                  formatted = numbers.substring(0, 3) + '-' + numbers.substring(3);
-                } else if (numbers.length > 7) {
-                  formatted = numbers.substring(0, 3) + '-' + numbers.substring(3, 7) + '-' + numbers.substring(7, numbers.length > 11 ? 11 : numbers.length);
-                }
-                // 010만 입력된 경우 하이픈이 붙지 않도록 처리
-                if (numbers == '010') {
-                  formatted = '010';
-                }
-                if (formatted != value) {
-                  _phoneController.value = TextEditingValue(
-                    text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
-                  );
-                }
+                setState(() {
+                  // 010은 고정, 나머지 8자리만 입력 가능
+                  String numbers = value.replaceAll(RegExp(r'[^0-9]'), '');
+                  if (!numbers.startsWith('010')) {
+                    numbers = '010' + numbers.replaceFirst(RegExp(r'^0*'), '');
+                  }
+                  if (numbers.length < 3) {
+                    numbers = '010';
+                  }
+                  if (numbers.length > 11) {
+                    numbers = numbers.substring(0, 11);
+                  }
+                  String formatted = numbers;
+                  if (numbers.length > 3 && numbers.length <= 7) {
+                    formatted = numbers.substring(0, 3) + '-' + numbers.substring(3);
+                  } else if (numbers.length > 7) {
+                    formatted = numbers.substring(0, 3) + '-' + numbers.substring(3, 7) + '-' + numbers.substring(7, numbers.length > 11 ? 11 : numbers.length);
+                  }
+                  // 010만 입력된 경우 하이픈이 붙지 않도록 처리
+                  if (numbers == '010') {
+                    formatted = '010';
+                  }
+                  if (formatted != value) {
+                    _phoneController.value = TextEditingValue(
+                      text: formatted,
+                      selection: TextSelection.collapsed(offset: formatted.length),
+                    );
+                  }
+                });
               },
+            ),
+            SizedBox(height: 24),
+            // 6. 닉네임 + 중복확인
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _userNameController,
+                    decoration: InputDecoration(
+                      labelText: '닉네임',
+                      border: OutlineInputBorder(),
+                      errorText: _userNameError,
+                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                    },
+                  ),
+                ),
+                SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _handleCheckUserName,
+                  child: Text('중복확인'),
+                ),
+              ],
+            ),
+            SizedBox(height: 24),
+            // 7. 타석 방향
+            Text('당신의 타석 방향은?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _battingDirection = '좌';
+                    });
+                  },
+                  child: _buildToggleButton('좌'),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _battingDirection = '우';
+                    });
+                  },
+                  child: _buildToggleButton('우'),
+                ),
+              ],
             ),
             SizedBox(height: 24),
           ],
@@ -397,32 +597,20 @@ class _SignupPage2State extends State<SignupPage2> {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: () {
-              user_pw = _pwController.text.trim();
-              user_email = _emailController.text.trim();
-              // 휴대폰 번호 포맷 적용
-              String rawPhone = _phoneController.text.trim();
-              String phoneNumFormatted = rawPhone;
-              if (rawPhone.length == 11 && rawPhone.startsWith('010')) {
-                phoneNumFormatted = formatPhoneNumber(rawPhone);
-              }
-              phone_num = phoneNumFormatted;
-              // 최종 유효성 검사
-              _validatePasswords();
-              if (_passwordError != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(_passwordError!)),
-                );
-                return;
-              }
-              // 다음 단계 or 가입 처리
-              print('가입 정보 입력 완료');
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SignupPage3(user_email!, user_pw!, phone_num!)),
-              );
-            },
-            child: Text('다음으로'),
+            onPressed: _isFormValid()
+                ? () {
+                    _handleSignup();
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _isFormValid() ? Color(0xFF6750A4) : null,
+              foregroundColor: Colors.white,
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            child: const Text('회원가입'),
           ),
         ),
       ),
@@ -493,6 +681,25 @@ class _SignupPage2State extends State<SignupPage2> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildToggleButton(String label) {
+    final isSelected = _battingDirection == label;
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? Color(0xFF6750A4) : Colors.grey[300],
+        foregroundColor: isSelected ? Colors.white : Colors.black,
+        textStyle: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      onPressed: () {
+        setState(() {
+          _battingDirection = label;
+        });
+      },
+      child: Text(label),
     );
   }
 }
