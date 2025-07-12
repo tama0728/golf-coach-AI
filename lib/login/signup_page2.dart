@@ -26,6 +26,7 @@ class _SignupPage2State extends State<SignupPage2> {
   String? user_nickname;
   int? batting_side;
   String? _userNameError;
+  bool _userNameChecked = false;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -293,6 +294,7 @@ class _SignupPage2State extends State<SignupPage2> {
     if (userNickname.isEmpty) {
       setState(() {
         _userNameError = '닉네임을 입력하세요.';
+        _userNameChecked = false;
       });
       return;
     }
@@ -310,6 +312,7 @@ class _SignupPage2State extends State<SignupPage2> {
       if (response.statusCode == 200) {
         setState(() {
           _userNameError = null;
+          _userNameChecked = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('사용 가능한 닉네임입니다.')),
@@ -317,6 +320,7 @@ class _SignupPage2State extends State<SignupPage2> {
       } else {
         setState(() {
           _userNameError = '이미 사용 중인 닉네임입니다.';
+          _userNameChecked = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_userNameError!)),
@@ -325,6 +329,7 @@ class _SignupPage2State extends State<SignupPage2> {
     } catch (e) {
       setState(() {
         _userNameError = '네트워크 오류: $e';
+        _userNameChecked = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_userNameError!)),
@@ -412,6 +417,7 @@ class _SignupPage2State extends State<SignupPage2> {
         _phoneController.text.replaceAll('-', '').length == 11 &&
         _userNameController.text.isNotEmpty &&
         _userNameError == null &&
+        _userNameChecked == true &&
         _battingDirection != null;
   }
 
@@ -462,6 +468,7 @@ class _SignupPage2State extends State<SignupPage2> {
                 border: OutlineInputBorder(),
               ),
             ),
+            SizedBox(height: 16),
             // 3. 비밀번호
             TextField(
               controller: _pwController,
@@ -540,6 +547,7 @@ class _SignupPage2State extends State<SignupPage2> {
             SizedBox(height: 24),
             // 6. 닉네임 + 중복확인
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: TextField(
@@ -550,14 +558,20 @@ class _SignupPage2State extends State<SignupPage2> {
                       errorText: _userNameError,
                     ),
                     onChanged: (value) {
-                      setState(() {});
+                      setState(() {
+                        _userNameError = '닉네임 중복확인을 해주세요.';
+                        _userNameChecked = false;
+                      });
                     },
                   ),
                 ),
                 SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: _handleCheckUserName,
-                  child: Text('중복확인'),
+                SizedBox(
+                  height: 56, // TextField 높이와 맞춤
+                  child: ElevatedButton(
+                    onPressed: _handleCheckUserName,
+                    child: Text('중복확인'),
+                  ),
                 ),
               ],
             ),
