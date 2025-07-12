@@ -5,29 +5,27 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SignupPage3 extends StatefulWidget {
-  final String id;
-  final String pw;
-  final String email;
-  final String phoneNum;
-  const SignupPage3(this.id, this.pw, this.email, this.phoneNum);
+  final String user_email;
+  final String user_pw;
+  final String phone_num;
+  final String user_nickname;
+  const SignupPage3(this.user_email, this.user_pw, this.phone_num, this.user_nickname);
 
   @override
   _SignupPage3State createState() => _SignupPage3State();
 }
 
 class _SignupPage3State extends State<SignupPage3> {
-  final _nicknameController = TextEditingController();
-  final _heightController = TextEditingController();
+  final _userNameController = TextEditingController();
   final _experienceController = TextEditingController();
   String? _battingDirection; // '좌' or '우'
 
-  String? userName;
-  String? phoneNum;
-  String? userHeight;
-  int? userHand;
+  String? user_nickname;
+  int? batting_side;
 
   bool _isLoading = false;
   String? _errorMessage;
+  String? _userNameError;
 
 
   Future<void> _handleSignup() async {
@@ -37,16 +35,17 @@ class _SignupPage3State extends State<SignupPage3> {
     });
 
     final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/signup');
-    print( "phoneNum: ${widget.phoneNum}");
+    print("phone_num: ${widget.phone_num}");
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          "user_email":widget.email,
-          "user_pw":widget.pw,
-          "user_name":userName,
-          "location_agree":null // 위치동의값을 추후 실제 값으로 대체
+          "user_email": widget.user_email,
+          "user_pw": widget.user_pw,
+          "user_nickname": widget.user_nickname,
+          "phone_num": widget.phone_num,
+          "batting_side": batting_side
         }),
       );
 
@@ -99,6 +98,55 @@ class _SignupPage3State extends State<SignupPage3> {
     );
   }
 
+  Future<void> _handleCheckUserName() async {
+    final userNickname = _userNameController.text.trim();
+    user_nickname = userNickname;
+    if (userNickname.isEmpty) {
+      setState(() {
+        _userNameError = '닉네임을 입력하세요.';
+      });
+      return;
+    }
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/check-username');
+    setState(() {
+      _isLoading = true;
+      _userNameError = null;
+    });
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_nickname': userNickname}),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _userNameError = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('사용 가능한 닉네임입니다.')),
+        );
+      } else {
+        setState(() {
+          _userNameError = '이미 사용 중인 닉네임입니다.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_userNameError!)),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _userNameError = '네트워크 오류: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_userNameError!)),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,18 +160,17 @@ class _SignupPage3State extends State<SignupPage3> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _nicknameController,
+                    controller: _userNameController,
                     decoration: InputDecoration(
                       labelText: '닉네임',
                       border: OutlineInputBorder(),
+                      errorText: _userNameError,
                     ),
                   ),
                 ),
                 SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: () {
-                    print('중복확인 클릭');
-                  },
+                  onPressed: _handleCheckUserName,
                   child: Text('중복확인'),
                 ),
               ],
@@ -141,32 +188,6 @@ class _SignupPage3State extends State<SignupPage3> {
               ],
             ),
             SizedBox(height: 24),
-
-            // 키 입력
-            Text('당신의 키는?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            SizedBox(height: 12),
-            TextField(
-              controller: _heightController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '키 (cm)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 24),
-
-            // 구력 입력
-            Text('당신의 구력은?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            SizedBox(height: 12),
-            TextField(
-              controller: _experienceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '개월 수',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 32),
           ],
         ),
       ),
@@ -178,22 +199,31 @@ class _SignupPage3State extends State<SignupPage3> {
           height: 48,
           child: ElevatedButton(
             onPressed: () {
-              userName = _nicknameController.text.trim();
-              userHeight = _heightController.text.trim();
-              userHand = _battingDirection == '좌' ? 1 : 0;
+              user_nickname = _userNameController.text.trim();
+              batting_side = _battingDirection == '좌' ? 1 : 0;
+              // 닉네임 유효성 검사
+              if (user_nickname == null || user_nickname!.isEmpty) {
+                setState(() {
+                  _userNameError = '닉네임을 입력하세요.';
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_userNameError!)),
+                );
+                return;
+              }
+              if (_userNameError != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_userNameError!)),
+                );
+                return;
+              }
               print('다음 단계로 이동');
               print('회원가입 정보:');
-              print('아이디: ${widget.id}');
-              print('비밀번호: ${widget.pw}');
-              print('이메일: ${widget.email}');
-              print('닉네임: $userName');
-              print('키: $userHeight');
-              print('타석 방향: $userHand');
-              print('번호: ${widget.phoneNum}');
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => LoginPage()),
-              // );
+              print('user_email: ${widget.user_email}');
+              print('user_pw: ${widget.user_pw}');
+              print('user_nickname: ${widget.user_nickname}');
+              print('batting_side: $batting_side');
+              print('phone_num: ${widget.phone_num}');
               _handleSignup();
             },
             child: Text('로그인하러 가기'),

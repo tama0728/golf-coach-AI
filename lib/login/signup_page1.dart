@@ -10,14 +10,12 @@ class _SignupPage1State extends State<SignupPage1> {
   bool agreeAll = false;
   bool agree1 = false;
   bool agree2 = false;
-  bool agree3 = false;
 
   void _toggleAll(bool? val) {
     setState(() {
       agreeAll = val ?? false;
       agree1 = agreeAll;
       agree2 = agreeAll;
-      agree3 = agreeAll;
     });
   }
 
@@ -55,7 +53,7 @@ class _SignupPage1State extends State<SignupPage1> {
 
   @override
   Widget build(BuildContext context) {
-    agreeAll = agree1 && agree2 && agree3;
+    agreeAll = agree1 && agree2;
 
     return Scaffold(
       appBar: AppBar(title: Text('회원가입')),
@@ -82,12 +80,6 @@ class _SignupPage1State extends State<SignupPage1> {
               value: agree2,
               onChanged: (val) => setState(() => agree2 = val ?? false),
               content: '개인정보 수집에 대한 설명이 들어가는 부분입니다...',
-            ),
-            _buildTermTile(
-              title: '[선택] 위치 기반 서비스 이용약관',
-              value: agree3,
-              onChanged: (val) => setState(() => agree3 = val ?? false),
-              content: '위치 기반 서비스에 대한 설명이 여기에...',
             ),
           ],
         ),
