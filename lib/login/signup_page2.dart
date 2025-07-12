@@ -28,6 +28,7 @@ class _SignupPage2State extends State<SignupPage2> {
   bool _codeSent = false; // 인증번호 발송 여부 상태 추가
   String? _verificationCode; // 실제 인증번호 저장
   String? _passwordError;
+  String? _emailFormatError;
 
   String? user_email;
   String? user_pw;
@@ -262,6 +263,17 @@ class _SignupPage2State extends State<SignupPage2> {
     }
   }
 
+  void _onEmailChanged(String value) {
+    setState(() {
+      if (!EmailValidator.validate(value.trim())) {
+        _emailFormatError = '이메일 형식이 올바르지 않습니다.';
+        _isEmailValid = false;
+      } else {
+        _emailFormatError = null;
+      }
+    });
+  }
+
   // 휴대폰 번호 하이픈 자동 포맷 함수
   String formatPhoneNumber(String input) {
     // input: 01012345678 → 010-1234-5678
@@ -279,38 +291,55 @@ class _SignupPage2State extends State<SignupPage2> {
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            _buildTextFieldWithButton(
-            _emailController,
-            '이메일',
-            _isEmailValid ? (_codeSent ? '인증번호 재발송' : '인증번호 발송') : '중복확인',
-            _isEmailValid ? _handleSendCode : _handleCheckEmail
-          ),
-          TextField(
-            controller: _pwController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: '비밀번호',
-              border: OutlineInputBorder(),
-              errorText: _passwordError,
+            // 이메일 버튼 콜백 변수 선언
+            (() {
+              VoidCallback? emailButtonCallback;
+              if (_emailFormatError == null && _emailController.text.isNotEmpty) {
+                emailButtonCallback = _isEmailValid
+                  ? () { _handleSendCode(); }
+                  : () { _handleCheckEmail(); };
+              }
+              return _buildTextFieldWithButton(
+                _emailController,
+                '이메일',
+                _isEmailValid ? (_codeSent ? '인증번호 재발송' : '인증번호 발송') : '중복확인',
+                emailButtonCallback,
+              );
+            })(),
+            if (_emailFormatError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  _emailFormatError!,
+                  style: TextStyle(color: Colors.red, fontSize: 13),
+                ),
+              ),
+            TextField(
+              controller: _pwController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: '비밀번호',
+                border: OutlineInputBorder(),
+                errorText: _passwordError,
+              ),
+              onChanged: (value) {
+                _validatePasswords();
+              },
             ),
-            onChanged: (value) {
-              _validatePasswords();
-            },
-          ),
-          SizedBox(height: 16),
-          TextField(
-            controller: _pwCheckController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: '비밀번호 확인',
-              border: OutlineInputBorder(),
-              errorText: _passwordError,
+            SizedBox(height: 16),
+            TextField(
+              controller: _pwCheckController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: '비밀번호 확인',
+                border: OutlineInputBorder(),
+                errorText: _passwordError,
+              ),
+              onChanged: (value) {
+                _validatePasswords();
+              },
             ),
-            onChanged: (value) {
-              _validatePasswords();
-            },
-          ),
-          SizedBox(height: 16),
+            SizedBox(height: 16),
             _buildTextFieldWithButton(
               _codeController,
               '인증번호 입력',
@@ -371,7 +400,6 @@ class _SignupPage2State extends State<SignupPage2> {
             onPressed: () {
               user_pw = _pwController.text.trim();
               user_email = _emailController.text.trim();
-              user_nickname = _idController.text.trim(); // 사용자 닉네임 설정
               // 휴대폰 번호 포맷 적용
               String rawPhone = _phoneController.text.trim();
               String phoneNumFormatted = rawPhone;
@@ -391,7 +419,7 @@ class _SignupPage2State extends State<SignupPage2> {
               print('가입 정보 입력 완료');
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SignupPage3(user_email!, user_pw!, phone_num!, user_nickname!)),
+                MaterialPageRoute(builder: (context) => SignupPage3(user_email!, user_pw!, phone_num!)),
               );
             },
             child: Text('다음으로'),
@@ -417,7 +445,7 @@ class _SignupPage2State extends State<SignupPage2> {
   }
 
   Widget _buildTextFieldWithButton(
-      TextEditingController controller, String label, String buttonText, VoidCallback onPressed) {
+      TextEditingController controller, String label, String buttonText, VoidCallback? onPressed) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -429,6 +457,7 @@ class _SignupPage2State extends State<SignupPage2> {
                 labelText: label,
                 border: OutlineInputBorder(),
               ),
+              onChanged: label == '이메일' ? _onEmailChanged : null,
             ),
           ),
           SizedBox(width: 10),

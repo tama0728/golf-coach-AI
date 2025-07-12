@@ -8,8 +8,7 @@ class SignupPage3 extends StatefulWidget {
   final String user_email;
   final String user_pw;
   final String phone_num;
-  final String user_nickname;
-  const SignupPage3(this.user_email, this.user_pw, this.phone_num, this.user_nickname);
+  const SignupPage3(this.user_email, this.user_pw, this.phone_num);
 
   @override
   _SignupPage3State createState() => _SignupPage3State();
@@ -35,7 +34,7 @@ class _SignupPage3State extends State<SignupPage3> {
     });
 
     final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/signup');
-    print("phone_num: ${widget.phone_num}");
+
     try {
       final response = await http.post(
         url,
@@ -43,7 +42,7 @@ class _SignupPage3State extends State<SignupPage3> {
         body: jsonEncode({
           "user_email": widget.user_email,
           "user_pw": widget.user_pw,
-          "user_nickname": widget.user_nickname,
+          "user_nickname": user_nickname,
           "phone_num": widget.phone_num,
           "batting_side": batting_side
         }),
@@ -221,9 +220,8 @@ class _SignupPage3State extends State<SignupPage3> {
               print('회원가입 정보:');
               print('user_email: ${widget.user_email}');
               print('user_pw: ${widget.user_pw}');
-              print('user_nickname: ${widget.user_nickname}');
+              print('user_nickname: $user_nickname');
               print('batting_side: $batting_side');
-              print('phone_num: ${widget.phone_num}');
               _handleSignup();
             },
             child: Text('로그인하러 가기'),
