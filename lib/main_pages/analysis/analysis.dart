@@ -10,9 +10,7 @@ import 'dart:async';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'package:video_trimmer/video_trimmer.dart';
-import 'result.dart';
-import 'process.dart';
-import 'dart:math' as math;
+import 'result_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -90,9 +88,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
     try {
       final XFile video = await _controller!.stopVideoRecording();
-      final Directory appDir = await getApplicationDocumentsDirectory();
+      final Directory appDir = await getTemporaryDirectory();
       final String newPath = '${appDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
-      final File newVideo = await File(video.path).copy(newPath);
+      await File(video.path).copy(newPath);
       setState(() {
         _isRecording = false;
         _timer?.cancel();
@@ -173,21 +171,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
               // 영상 미리보기(화면 전체, 비율 유지, 잘림 없이)
               Positioned.fill(
                 child: FittedBox(
-                  fit: BoxFit.contain,  // 비율 유지
+                  // 비율 유지
+                  fit: BoxFit.contain,
                   child: SizedBox(
                     width: videoSize.width,
                     height: videoSize.height,
                     child: VideoViewer(trimmer: _trimmer!),
                   ),
                 ),
-                // child: FittedBox(
-                //   fit: BoxFit.cover,
-                //   child: SizedBox(
-                //     width: videoSize.width,
-                //     height: videoSize.height,
-                //     child: VideoViewer(trimmer: _trimmer!),
-                //   ),
-                // ),
               ),
               // TrimViewer (하단 오버레이)
               Positioned(
@@ -257,17 +248,17 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     print('트리밍 완료: $outputPath');
                                     _videoPath = outputPath;
                                     // 트리밍이 성공적으로 끝난 후에만 이동
-                                    Navigator.push(
-                                      context,
-                                      fetchResultData() as Route<Object?>,
-                                      // MaterialPageRoute(
-                                      //   builder: (context) =>
-                                      //   //   ProcessPage(
-                                      //   //     _videoPath!,
-                                      //   //     isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
-                                      //   // ),
-                                      // ),
-                                    );
+                                    uploadResultData();
+                                    // Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: (context) =>
+                                    //       ProcessPage(
+                                    //         _videoPath!,
+                                    //         isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
+                                    //     ),
+                                    //   ),
+                                    // );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('트리밍 실패!')),
@@ -393,7 +384,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Future<void> fetchResultData() async {
+  Future<void> uploadResultData() async {
     try {
       print('Fetching result data for video: $_videoPath');
       var request = http.MultipartRequest(
@@ -422,7 +413,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         try {
           final url = 'http://${dotenv.get('HOSTIP')}:3000/api/analysis/upload';
           print('File ID: $_fileId');
-          print("Response Data: $jsonData");
+          print("user email: ${await FlutterSecureStorage().read(key: 'email')}");
+          final double score = jsonData['score'] ?? 0;
           final response = await http.post(
             Uri.parse(url),
             headers: {'Content-Type': 'application/json'},
@@ -434,13 +426,22 @@ class _AnalysisPageState extends State<AnalysisPage> {
               "analysis_top_path" : jsonData['image_top_url'] ?? '',
               "analysis_contact_path" : jsonData['image_contact_url'] ?? '',
               "analysis_result_json" : jsonData['swing_analysis'] ?? {},
-              "analysis_score" : jsonData['score'] ?? 0,
+              "analysis_score" : score,
               "analysis_score_url" : jsonData['score_url'] ?? 0,
             }),
           );
 
           if (response.statusCode == 201) {
             print('Analysis info uploaded successfully');
+            // 결과 페이지로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ResultUIPage(
+                  _fileId!, score,
+                ),
+              ),
+            );
           } else {
             print('Failed to upload analysis info: ${response.statusCode}, ${response.body}');
           }
