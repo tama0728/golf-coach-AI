@@ -616,7 +616,7 @@ class ResultTabPage extends StatelessWidget {
             Text(
               analysis.evaluation,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 20,
                 color: Colors.black87,
               ),
             ),

@@ -67,6 +67,7 @@ class _LoginPageState extends State<LoginPage> {
 
         // 토큰 안전하게 저장
         await storage.write(key: 'jwt_token', value: token);
+        await storage.write(key: "email", value: id);
 
         // ★ 자동로그인 체크값 저장
         if (_autoLoginChecked) {
