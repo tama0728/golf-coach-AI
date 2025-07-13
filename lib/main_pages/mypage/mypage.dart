@@ -14,6 +14,55 @@ class MyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // // 최고 점수 및 날짜 계산
+    // int maxScore = -1;
+    // String maxScoreDate = '';
+    // int totalScore = 0;
+    // for (var record in records) {
+    //   int score = int.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
+    //   totalScore += score;
+    //   if (score > maxScore) {
+    //     maxScore = score;
+    //     maxScoreDate = record['datetime']!;
+    //   }
+    // }
+    // double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          UserInfoHeader(username: username, swingDir: swingDir, records: records),
+          // Divider는 Padding 밖에 둬서 끝까지 퍼지게
+          Divider(
+            color: Color(0xFFE6F5E6),
+            thickness: 15,
+            height: 15,
+          ),
+          AnalysisResultList(records: records),
+        ],
+      ),
+    );
+  }
+}
+
+// 1. 유저정보 헤더 영역
+class UserInfoHeader extends StatelessWidget {
+  final String username;
+  final String swingDir;
+  final List<Map<String, String>> records;
+
+  UserInfoHeader({
+    required this.username,
+    required this.swingDir,
+    required this.records,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
     // 최고 점수 및 날짜 계산
     int maxScore = -1;
     String maxScoreDate = '';
@@ -27,94 +76,90 @@ class MyPage extends StatelessWidget {
       }
     }
     double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
+    // 위젯 빌드
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BodyInfoHeader(username: username, swingDir: swingDir),
-          Divider(
-            color: Color(0xFFE6F5E6),
-            thickness: 15,
-            height: 15,
+          // 제목 + 설정 버튼
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '개인정보',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                // 오른쪽 위 아이콘 + -> 톱니바퀴
+                icon: Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+                  );
+                },
+              ),
+            ],
           ),
-          // 상단정보, Padding 안쪽 내용
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 라벨 한 줄
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildLabel('스윙 방향'),
-                    _verticalDivider(),
-                    _buildLabel('최고 점수'),
-                    _verticalDivider(),
-                    _buildLabel('평균 점수'),
-                  ],
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
                 ),
-                SizedBox(height: 8),
-                // 값 한 줄
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildValue('우타'),
-                    _verticalDivider(),
-                    Tooltip(
-                      message: maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
-                      child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
-                    ),
-                    _verticalDivider(),
-                    _buildValue(records.isNotEmpty ? '${avgScore.toStringAsFixed(1)}점' : '-'),
-                  ],
-                ),
-                SizedBox(height: 40),
-              ],
-            ),
+                child: const Icon(Icons.person, size: 30, color: Colors.grey),
+              ),
+              SizedBox(width: 12),
+              Text(
+                '$username 님',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-
-          // Divider는 Padding 밖에 둬서 끝까지 퍼지게
-          Divider(
-            color: Color(0xFFE6F5E6),
-            thickness: 15,
-            height: 15,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildLabel('스윙 방향'),
+                  _verticalDivider(),
+                  _buildLabel('최고 점수'),
+                  _verticalDivider(),
+                  _buildLabel('평균 점수'),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildValue(swingDir),
+                  _verticalDivider(),
+                  Tooltip(
+                    message: maxScoreDate.isNotEmpty
+                        ? '달성일: $maxScoreDate'
+                        : '',
+                    child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
+                  ),
+                  _verticalDivider(),
+                  _buildValue(records.isNotEmpty
+                      ? '${avgScore.toStringAsFixed(1)}점'
+                      : '-'),
+                ],
+              ),
+            ],
           ),
-          AnalysisResultList(records: records),
-          // // 분석결과 기록 제목
-          // Padding(
-          //   padding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
-          //   child: Text(
-          //     '분석결과 기록',
-          //     style: TextStyle(
-          //       fontSize: 20,
-          //       fontWeight: FontWeight.bold,
-          //     ),
-          //   ),
-          // ),
-          //
-          // Expanded(
-          //   child: ListView.separated(
-          //     padding: EdgeInsets.only(top: 10),
-          //     itemCount: records.length,
-          //     itemBuilder: (context, index) => AnalysisRecordTile(
-          //       datetime: records[index]['datetime']!,
-          //       score: records[index]['score']!,
-          //     ),
-          //     separatorBuilder: (_, __) => Divider(
-          //       color: Color(0xFFD9D9D9),
-          //       thickness: 1,
-          //       height: 10,
-          //     ),
-          //   ),
-          // ),
+          SizedBox(height: 40),
         ],
       ),
     );
   }
-
   // 라벨 빌더
   Widget _buildLabel(String label) {
     return SizedBox(
@@ -157,75 +202,6 @@ class MyPage extends StatelessWidget {
         color: Colors.grey[300],
         thickness: 1.5,
         width: 30,
-      ),
-    );
-  }
-}
-
-// 1. 신체정보 헤더 영역
-class BodyInfoHeader extends StatelessWidget {
-  final String username;
-  final String swingDir;
-
-  const BodyInfoHeader({
-    required this.username,
-    required this.swingDir,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 제목 + 설정 버튼
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '개인정보',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                // 오른쪽 위 아이콘 + -> 톱니바퀴
-                icon: Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey[200],
-                ),
-                child: const Icon(Icons.person, size: 30, color: Colors.grey),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$username / $swingDir',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-        ],
       ),
     );
   }
