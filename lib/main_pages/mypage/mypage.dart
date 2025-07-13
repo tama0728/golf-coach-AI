@@ -361,7 +361,7 @@ class AnalysisRecordTile extends StatelessWidget {
       contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 4),
       title: Text(
         datetime,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
