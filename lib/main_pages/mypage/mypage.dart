@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'edit_body_info.dart';
 
 class MyPage extends StatelessWidget {
+  final String username = '김수뭉';
+  final String swingDir = '우타';
+
   final List<Map<String, String>> records = [
     {'datetime': '2025/01/13 13:20:48', 'score': '70점'},
     {'datetime': '2025/02/05 17:45:17', 'score': '62점'},
@@ -16,7 +19,7 @@ class MyPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BodyInfoHeader(),
+          BodyInfoHeader(username: username, swingDir: swingDir),
           Divider(
             color: Color(0xFFE6F5E6),
             thickness: 15,
@@ -31,7 +34,14 @@ class MyPage extends StatelessWidget {
 
 // 1. 신체정보 헤더 영역
 class BodyInfoHeader extends StatelessWidget {
-  const BodyInfoHeader({super.key});
+  final String username;
+  final String swingDir;
+
+  const BodyInfoHeader({
+    required this.username,
+    required this.swingDir,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,16 +50,17 @@ class BodyInfoHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 제목 + 버튼
+          // 제목 + 설정 버튼
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '신체정보',
+                '개인정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               IconButton(
-                icon: Icon(Icons.add),
+                // 오른쪽 위 아이콘 + -> 톱니바퀴
+                icon: Icon(Icons.settings),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -59,55 +70,38 @@ class BodyInfoHeader extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 24),
+          SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              BodyInfoItem(label: '스윙 방향', value: '우타'),
-              BodyInfoItem(label: '평균 타수', value: '100타'),
-              BodyInfoItem(label: '구력', value: '6개월'),
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
+                ),
+                child: const Icon(Icons.person, size: 30, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$username / $swingDir',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ],
           ),
-          SizedBox(height: 40),
+          SizedBox(height: 20),
         ],
       ),
     );
   }
 }
 
-// 2. 신체정보 항목 위젯
-class BodyInfoItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const BodyInfoItem({required this.label, required this.value, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[800],
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// 3. 분석결과 리스트 전체
+// 2. 분석결과 리스트 전체
 class AnalysisResultList extends StatelessWidget {
   final List<Map<String, String>> records;
 
