@@ -249,16 +249,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     _videoPath = outputPath;
                                     // 트리밍이 성공적으로 끝난 후에만 이동
                                     uploadResultData();
-                                    // Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //     builder: (context) =>
-                                    //       ProcessPage(
-                                    //         _videoPath!,
-                                    //         isFrontCamera: _cameras[_selectedCameraIdx].lensDirection == CameraLensDirection.front,
-                                    //     ),
-                                    //   ),
-                                    // );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(content: Text('트리밍 실패!')),
@@ -463,4 +453,3 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
   }
 }
-

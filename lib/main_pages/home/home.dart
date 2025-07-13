@@ -6,6 +6,9 @@ import '../more/notice.dart';
 import '../more/notice_detail_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -58,9 +61,13 @@ class _HomePageState extends State<HomePage> {
 
   final ScrollController _videoScrollController = ScrollController();
 
+  final storage = FlutterSecureStorage();
+  String? _userNicknameMessage;
+
   @override
   void initState() {
     super.initState();
+    _fetchUserNickname();
     _fetchRecommendedVideos();
   }
 
@@ -106,6 +113,44 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _fetchUserNickname() async {
+    try {
+      final token = await storage.read(key: 'jwt_token');
+      final response = await http.get(
+        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _userNicknameMessage = data['user_nickname'] ?? "사용자 정보를 불러오지 못했습니다.";
+        });
+      } else if (response.statusCode == 401) {
+        setState(() {
+          _userNicknameMessage = "로그인 정보가 유효하지 않습니다.";
+        });
+      } else if (response.statusCode == 404) {
+        setState(() {
+          _userNicknameMessage = "사용자 정보를 불러오지 못했습니다.";
+        });
+      } else {
+        setState(() {
+          _userNicknameMessage = "알 수 없는 오류가 발생했습니다.";
+        });
+      }
+    } on SocketException {
+      setState(() {
+        _userNicknameMessage = "네트워크에 연결되어 있지 않습니다.";
+      });
+    } catch (e) {
+      setState(() {
+        _userNicknameMessage = "알 수 없는 오류가 발생했습니다.";
+      });
+    }
+  }
+
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
     // 튜토리얼 페이지로 이동 (인덱스: 1)
@@ -146,33 +191,50 @@ class _HomePageState extends State<HomePage> {
       onTap: () {
         MainPage.currentState?.updateIndex(3);
       },
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[200],
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Color(0xFFE6F5E6), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
-            child: const Icon(Icons.person, size: 30, color: Colors.grey),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '안녕하세요,',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey[200],
               ),
-              const Text(
-                '김수뭉님',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const Spacer(),
-        ],
+              child: const Icon(Icons.person, size: 30, color: Colors.grey),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '안녕하세요,',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                Text(
+                  _userNicknameMessage != null ? '$_userNicknameMessage' : '...', // 사용자 닉네임 동적 표시
+                  style:
+                      const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const Spacer(),
+          ],
+        ),
       ),
     );
   }
