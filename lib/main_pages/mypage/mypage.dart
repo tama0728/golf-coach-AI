@@ -11,6 +11,20 @@ class MyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 최고 점수 및 날짜 계산
+    int maxScore = -1;
+    String maxScoreDate = '';
+    int totalScore = 0;
+    for (var record in records) {
+      int score = int.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
+      totalScore += score;
+      if (score > maxScore) {
+        maxScore = score;
+        maxScoreDate = record['datetime']!;
+      }
+    }
+    double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -22,34 +36,30 @@ class MyPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '신체정보',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24),
+                // 라벨 한 줄
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildInfoItem('스윙 방향', '우타'),
-                    _buildInfoItem('평균 타수', '100타'),
-                    _buildInfoItem('구력', '6개월'),
+                    _buildLabel('스윙 방향'),
+                    _verticalDivider(),
+                    _buildLabel('최고 점수'),
+                    _verticalDivider(),
+                    _buildLabel('평균 점수'),
+                  ],
+                ),
+                SizedBox(height: 8),
+                // 값 한 줄
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildValue('우타'),
+                    _verticalDivider(),
+                    Tooltip(
+                      message: maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
+                      child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
+                    ),
+                    _verticalDivider(),
+                    _buildValue(records.isNotEmpty ? '${avgScore.toStringAsFixed(1)}점' : '-'),
                   ],
                 ),
                 SizedBox(height: 40),
@@ -98,11 +108,12 @@ class MyPage extends StatelessWidget {
     );
   }
 
-  // 신체정보 항목
-  Widget _buildInfoItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
+  // 라벨 빌더
+  Widget _buildLabel(String label) {
+    return SizedBox(
+      width: 90,
+      child: Center(
+        child: Text(
           label,
           style: TextStyle(
             fontSize: 18,
@@ -110,15 +121,36 @@ class MyPage extends StatelessWidget {
             color: Colors.grey[800],
           ),
         ),
-        SizedBox(height: 8),
-        Text(
+      ),
+    );
+  }
+
+  // 값 빌더
+  Widget _buildValue(String value) {
+    return SizedBox(
+      width: 90,
+      child: Center(
+        child: Text(
           value,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w600,
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  // 세로 구분선
+  Widget _verticalDivider() {
+    return Container(
+      height: 40,
+      child: VerticalDivider(
+        color: Colors.grey[300],
+        thickness: 1.5,
+        width: 30,
+      ),
     );
   }
 

@@ -11,13 +11,13 @@ import 'dart:math' as math;
 
 import 'package:golf_coach_app/main_pages/main_page.dart';
 
-class ResultPage extends StatefulWidget {
+class ProcessPage extends StatefulWidget {
   final String _videoPath;
   final bool isFrontCamera;
-  const ResultPage(this._videoPath, {required this.isFrontCamera});
+  const ProcessPage(this._videoPath, {required this.isFrontCamera});
 
   @override
-  _ResultPageState createState() => _ResultPageState();
+  _ProcessPageState createState() => _ProcessPageState();
 }
 
 class SwingAnalysis {
@@ -40,7 +40,7 @@ class SwingAnalysis {
   }
 }
 
-class _ResultPageState extends State<ResultPage> {
+class _ProcessPageState extends State<ProcessPage> {
   Map<String, dynamic>? _resultJsonData;
   bool _isLoaded = false;
   String? _errorMessage;
@@ -60,47 +60,53 @@ class _ResultPageState extends State<ResultPage> {
   bool _isSwingAnalysis = false;
   List<SwingAnalysis> _swingAnalysisList = [];
 
+  Directory _appDir = Directory('');
+
   @override
-  void initState() {
+  void initState() async {
     super.initState();
+    _appDir = await getApplicationDocumentsDirectory();
+
     _fetchResultData();
   }
 
-  Future<void> _downloadAndPlay() async {
+  Future<String> _downloadVideo() async {
     final url = _resultJsonData?['download_url'] ?? '';
     if (url.isEmpty) {
       setState(() {
         _errorMessage = '다운로드 URL이 없습니다.';
         _isLoaded = false;
       });
-      return;
+      return '';
     }
     try {
       final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$url'));
-      final tempDir = await getTemporaryDirectory();
-      final videoPath = '${tempDir.path}/processed_video.mp4';
-      _videoFile = File(videoPath);
+
+      final String videoPath = '${_appDir.path}/${_fileId}/${_fileId}_output.mp4';
+      _videoFile = await File(videoPath).create(recursive: true);
       await _videoFile?.writeAsBytes(response.bodyBytes);
 
-      final controller = VideoPlayerController.file(_videoFile!);
-      // 영상 초기화 및 실패 대응
-      await controller.initialize().catchError((e) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = '영상 로딩 실패: $e';
-            _isLoaded = false;
-          });
-        }
-        throw e; // 필요시 주석 처리
-      });
-      if (!mounted) return;
+
+      // final controller = VideoPlayerController.file(_videoFile!);
+      // // 영상 초기화 및 실패 대응
+      // await controller.initialize().catchError((e) {
+      //   if (mounted) {
+      //     setState(() {
+      //       _errorMessage = '영상 로딩 실패: $e';
+      //       _isLoaded = false;
+      //     });
+      //   }
+      //   throw e; // 필요시 주석 처리
+      // });
+      // if (!mounted) return;
 
       setState(() {
-        _controller = controller
-          ..play()
-          ..setLooping(true);
+        // _controller = controller
+        //   ..play()
+        //   ..setLooping(true);
         _isLoaded = true;
       });
+      return videoPath;
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -108,109 +114,159 @@ class _ResultPageState extends State<ResultPage> {
           _isLoaded = false;
         });
       }
+      print('Error downloading video: $e');
+      return '';
     }
   }
 
-  Future<void> _downloadAddressImage() async {
+  // Future<void> _downloadAndExtractZip() async {
+  //   final zipUrl = _resultJsonData?['zip_url'];
+  //   if (zipUrl == null || zipUrl.isEmpty) {
+  //     setState(() => _errorMessage = 'ZIP URL이 없습니다');
+  //     return;
+  //   }
+  //   try {
+  //     // setState(() => _isZipLoading = true);
+  //     final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$zipUrl'));
+  //     final archive = ZipDecoder().decodeBytes(response.bodyBytes);
+  //     final tempDir = await getTemporaryDirectory();
+  //     final imageFiles = <File>[];
+  //     for (final file in archive) {
+  //       if (file.isFile && (file.name.endsWith('.png') || file.name.endsWith('.jpg'))) {
+  //         final filename = '${tempDir.path}/${file.name}';
+  //         final outputFile = File(filename);
+  //         await outputFile.create(recursive: true);
+  //         await outputFile.writeAsBytes(file.content);
+  //         imageFiles.add(outputFile);
+  //       }
+  //     }
+  //     setState(() => _imageFiles = imageFiles.take(3).toList());
+  //   } catch (e) {
+  //     setState(() => _errorMessage = 'ZIP 처리 오류: $e');
+  //   } finally {
+  //     setState(() => _isZipLoading = true);
+  //   }
+  // }
+
+  Future<String> _downloadAddressImage() async {
     _isAddressImageLoading = false;
     final image_url = _resultJsonData?['image_address_url'];
     if (image_url == null || image_url.isEmpty) {
       setState(() => _errorMessage = 'image_address_url이 없습니다');
-      return;
+      return '';
     }
 
     try {
       print(image_url);
       http.Response response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_url'));
-      Directory tempDir = await getTemporaryDirectory();
-      _addressImageFile = File('${tempDir.path}/image_address.png');
+
+      final String addressDir = '${_appDir.path}/${_fileId}/${_fileId}_output_frame_address.jpg';
+      _addressImageFile = await File(addressDir).create(recursive: true);
       await _addressImageFile.writeAsBytes(response.bodyBytes);
+      print('Address image downloaded to: $addressDir');
+
       setState(() {
         _isAddressImageLoading = true;
       });
+      print('Address image loading state set to true');
+      return addressDir;
     } catch (e) {
       setState(() => _errorMessage = 'image_address 처리 오류: $e');
     } finally {
       setState(() => _isAddressImageLoading = true);
     }
+    return '';
   }
 
-  Future<void> _downloadContactImage() async {
+  Future<String> _downloadContactImage() async {
     _isContactImageLoading = false;
     final image_url = _resultJsonData?['image_contact_url'];
     if (image_url == null || image_url.isEmpty) {
       setState(() => _errorMessage = 'image_contact_url이 없습니다');
-      return;
+      return '';
     }
 
     try {
       print(image_url);
       http.Response response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_url'));
-      Directory tempDir = await getTemporaryDirectory();
-      _contactImageFile = File('${tempDir.path}/image_contact.png');
-      await _contactImageFile?.writeAsBytes(response.bodyBytes);
+
+      final String contactDir = '${_appDir.path}/${_fileId}/${_fileId}_output_frame_contact.jpg';
+      _contactImageFile = await File(contactDir).create(recursive: true);
+      await _contactImageFile.writeAsBytes(response.bodyBytes);
+
       setState(() {
         _isContactImageLoading = true;
       });
+      return contactDir;
     } catch (e) {
       setState(() => _errorMessage = 'image_contact 처리 오류: $e');
     } finally {
       setState(() => _isContactImageLoading = true);
     }
+    return '';
   }
 
-  Future<void> _downloadTopImage() async {
+  Future<String> _downloadTopImage() async {
     _isTopImageLoading = false;
     final image_url = _resultJsonData?['image_top_url'];
     if (image_url == null || image_url.isEmpty) {
       setState(() => _errorMessage = 'image_top_url이 없습니다');
-      return;
+      return '';
     }
 
     try {
       print(image_url);
       http.Response response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$image_url'));
-      Directory tempDir = await getTemporaryDirectory();
-      _topImageFile = File('${tempDir.path}/image_top.png');
-      await _topImageFile?.writeAsBytes(response.bodyBytes);
+
+      final String topDir = '${_appDir.path}/${_fileId}/${_fileId}_output_frame_top.jpg';
+      _topImageFile = await File(topDir).create(recursive: true);
+      await _topImageFile.writeAsBytes(response.bodyBytes);
 
       setState(() {
-        // _topImageFile = imageFile; // Top 이미지 파일 저장
         _isTopImageLoading = true;
       });
+      return topDir;
     } catch (e) {
       setState(() => _errorMessage = 'image_top 처리 오류: $e');
     } finally {
       setState(() => _isTopImageLoading = true);
     }
+    return '';
   }
 
-  Future<void> _getSwingAnalysis() async {
+  Future<String> _getSwingAnalysis() async {
     final swingData = _resultJsonData?['swing_analysis'];
     if (swingData == null || swingData.isEmpty) {
       setState(() => _errorMessage = '스윙 분석 데이터가 없습니다');
-      return;
+      return '';
     }
     try {
       final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$swingData'));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonEncode(jsonDecode(response.body));
         setState(() {
           print('Swing Analysis Data: $data');
-          print(data.runtimeType);
-          _swingAnalysisList = data
-              .map<SwingAnalysis>((item) => SwingAnalysis.fromJson(item as Map<String, dynamic>))
-              .toList();
+          // print(data.runtimeType);
+          // _swingAnalysisList = data
+          //     .map<SwingAnalysis>((item) => SwingAnalysis.fromJson(item as Map<String, dynamic>))
+          //     .toList();
           _errorMessage = null;
           _isSwingAnalysis = true;
         });
+        return data.toString();
       } else {
         setState(() => _errorMessage = '서버 응답 오류: ${response.statusCode}');
+        return '';
       }
     } catch (e) {
       setState(() => _errorMessage = '스윙 분석 데이터 불러오기 오류: $e');
+      return '';
     }
+  }
+
+  // upload analysis information
+  Future<void> _uploadAnalysisInfo() async {
   }
 
   Future<void> _fetchResultData() async {
@@ -238,22 +294,50 @@ class _ResultPageState extends State<ResultPage> {
           _resultJsonData = jsonData;
           _isLoaded = true;
         });
-        await _downloadAndPlay();
+        _fileId = jsonData['file_id'] ?? '';
+        var video = await _downloadVideo();
         // await _downloadAndExtractZip();
-        await _getSwingAnalysis();
-        await _downloadAddressImage();
-        await _downloadContactImage();
-        await _downloadTopImage();
+        var analysis = await _getSwingAnalysis();
+        var address = await _downloadAddressImage();
+        var top = await _downloadTopImage();
+        var contact = await _downloadContactImage();
+        try {
+          final url = 'http://${dotenv.get('HOSTIP')}:3000/api/analysis/upload';
+          print('File ID: $_fileId');
+          final response = await http.post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              "analysis_id" : _fileId,
+              "user_email" : "edw0728@gmail.com",
+              "analysis_video_path" : video,
+              "analysis_address_path" : address,
+              "analysis_top_path" : top,
+              "analysis_contact_path" : contact,
+              "analysis_result_json" : analysis,
+              "analysis_score" : 44.25,
+              }),
+            );
+
+          if (response.statusCode == 201) {
+            print('Analysis info uploaded successfully');
+          } else {
+            print('Failed to upload analysis info: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('Error uploading analysis info: $e');
+        }
+
       } else {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
-          _isLoaded = false;
+          // _isLoaded = false;
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = '오류 발생: $e';
-        _isLoaded = false;
+        // _isLoaded = false;
       });
     }
   }
@@ -438,6 +522,7 @@ class _ResultPageState extends State<ResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('isLoaded: $_isLoaded, isSwingAnalysis: $_isSwingAnalysis, isAddressImageLoading: $_isAddressImageLoading, isTopImageLoading: $_isTopImageLoading, isContactImageLoading: $_isContactImageLoading');
     final isAllLoaded = _isLoaded && _isSwingAnalysis && _isAddressImageLoading && _isTopImageLoading && _isContactImageLoading;
     return DefaultTabController(
       length: 3,

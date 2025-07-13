@@ -10,14 +10,12 @@ class _SignupPage1State extends State<SignupPage1> {
   bool agreeAll = false;
   bool agree1 = false;
   bool agree2 = false;
-  bool agree3 = false;
 
   void _toggleAll(bool? val) {
     setState(() {
       agreeAll = val ?? false;
       agree1 = agreeAll;
       agree2 = agreeAll;
-      agree3 = agreeAll;
     });
   }
 
@@ -55,7 +53,7 @@ class _SignupPage1State extends State<SignupPage1> {
 
   @override
   Widget build(BuildContext context) {
-    agreeAll = agree1 && agree2 && agree3;
+    agreeAll = agree1 && agree2;
 
     return Scaffold(
       appBar: AppBar(title: Text('회원가입')),
@@ -83,12 +81,6 @@ class _SignupPage1State extends State<SignupPage1> {
               onChanged: (val) => setState(() => agree2 = val ?? false),
               content: '개인정보 수집에 대한 설명이 들어가는 부분입니다...',
             ),
-            _buildTermTile(
-              title: '[선택] 위치 기반 서비스 이용약관',
-              value: agree3,
-              onChanged: (val) => setState(() => agree3 = val ?? false),
-              content: '위치 기반 서비스에 대한 설명이 여기에...',
-            ),
           ],
         ),
       ),
@@ -99,19 +91,23 @@ class _SignupPage1State extends State<SignupPage1> {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: () {
-              if (agree1 && agree2) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignupPage2()),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('필수 약관에 모두 동의해주세요.')),
-                );
-              }
-            },
-            child: Text('다음으로'),
+            onPressed: (agree1 && agree2)
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SignupPage2()),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: (agree1 && agree2) ? Color(0xFF6750A4) : null,
+              foregroundColor: Colors.white,
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            child: const Text('다음으로'),
           ),
         ),
       ),
