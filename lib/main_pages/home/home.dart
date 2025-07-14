@@ -9,6 +9,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
+import 'package:intl/intl.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'notice_logic.dart' as notice_logic;
+import 'video_logic.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -42,13 +47,6 @@ class _HomePageState extends State<HomePage> {
   // 최고 기록 데이터
   final Map<String, dynamic> bestRecord = {'date': '', 'score': 0};
 
-  // 임시 공지사항 데이터
-  final List<Map<String, String>> notices = [
-    {'title': '공지사항 1', 'date': '2024.03.20'},
-    {'title': '공지사항 2', 'date': '2024.03.18'},
-    {'title': '공지사항 3', 'date': '2024.03.15'},
-  ];
-
   // 추천 영상 URL만 저장
   final List<String> recommendedVideoUrls = [
     'https://www.youtube.com/watch?v=cYhctBZPzGQ',
@@ -67,6 +65,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    tz.initializeTimeZones();
     _fetchUserNickname();
     _fetchRecommendedVideos();
   }
@@ -151,6 +150,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  String formatDate(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return '';
+    final dateTime = DateTime.parse(isoString);
+    return DateFormat('yyyy.MM.dd HH:mm').format(dateTime);
+  }
+
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
     // 튜토리얼 페이지로 이동 (인덱스: 1)
@@ -226,9 +231,11 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 Text(
-                  _userNicknameMessage != null ? '$_userNicknameMessage' : '...', // 사용자 닉네임 동적 표시
-                  style:
-                      const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  _userNicknameMessage != null
+                      ? '$_userNicknameMessage'
+                      : '...', // 사용자 닉네임 동적 표시
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -240,25 +247,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildNoticeSection() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: mainColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        // 더보기 탭으로 이동
+        MainPage.currentState?.updateIndex(4);
+        // 공지사항 페이지로 바로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const NoticePage()),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: mainColor,
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            // 더보기 탭(인덱스: 4)으로 이동
-            MainPage.currentState?.updateIndex(4);
-            // 공지사항 페이지로 이동
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NoticePage()),
-            );
-          },
+        ),
+        child: Material(
+          color: Colors.transparent,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -306,55 +313,61 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...notices.map(
-                  (notice) => Column(
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          // 공지사항 상세 페이지로 이동
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NoticeDetailPage(
-                                notices: notices
-                                    .map((notice) => notice['title']!)
-                                    .toList(),
-                                index: notices.indexOf(notice),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
+                FutureBuilder<List<notice_logic.NoticeListItem>>(
+                  future: notice_logic.fetchRecentNotices(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.hasError) {
+                      return Center(child: Text('공지사항이 없습니다'));
+                    }
+                    final notices = snapshot.data!;
+                    return Column(
+                      children: [
+                        ...notices.map(
+                          (notice_logic.NoticeListItem notice) => Column(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  notice['title']!,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.black87,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child:
+                                          notice_logic.NoticeTitleInteractive(
+                                              title: notice.title,
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        NoticeDetailPage(
+                                                      noticeId: notice.noticeId,
+                                                    ),
+                                                  ),
+                                                );
+                                              }),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Text(
+                                      notice_logic.formatDate(notice.createdAt),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Text(
-                                notice['date']!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
+                              if (notice != notices.last)
+                                Divider(color: Colors.grey[300], height: 1),
                             ],
                           ),
                         ),
-                      ),
-                      if (notice != notices.last)
-                        Divider(color: Colors.grey[300], height: 1),
-                    ],
-                  ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -610,6 +623,55 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _NoticeTitleInteractive extends StatefulWidget {
+  final String title;
+  final VoidCallback onTap;
+  const _NoticeTitleInteractive(
+      {required this.title, required this.onTap, Key? key})
+      : super(key: key);
+
+  @override
+  State<_NoticeTitleInteractive> createState() =>
+      _NoticeTitleInteractiveState();
+}
+
+class _NoticeTitleInteractiveState extends State<_NoticeTitleInteractive> {
+  bool _pressed = false;
+
+  void _setPressed(bool pressed) {
+    if (_pressed != pressed) {
+      setState(() {
+        _pressed = pressed;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color color = _pressed ? Colors.green.shade400 : Colors.transparent;
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        color: color,
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Text(
+          widget.title,
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.black87,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 }

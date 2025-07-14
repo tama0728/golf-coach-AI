@@ -1,22 +1,163 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'edit_body_info.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../analysis/result_ui.dart';
 
-class MyPage extends StatelessWidget {
-  final List<Map<String, String>> records = [
-    {'datetime': '2025/01/13 13:20:48', 'score': '70점'},
-    {'datetime': '2025/02/05 17:45:17', 'score': '62점'},
-    {'datetime': '2025/02/14 11:30:33', 'score': '85점'},
-    {'datetime': '2025/05/20 09:40:22', 'score': '91점'},
-  ];
+class MyPage extends StatefulWidget {
+@override
+_MyPageState createState() => _MyPageState();
+}
+class _MyPageState extends State<MyPage> {
+  List<Map<String, String>> records = [];
+
+  late final String _userEmail;
+  late final String _userNickname;
+  late final String _swingDir;
+  final storage = FlutterSecureStorage();
+
+  bool _isLoaded = false;
+  bool _isUserInfoLoaded = false;
+  bool _isRecordsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchs();
+  }
+
+  Future<void> fetchs() async {
+    // 유저 정보와 스윙 방향을 가져오는 함수
+    await fetchUserInfo();
+    // 레코드를 가져오는 함수
+    await fetchRecords();
+    setState(() {
+      _isUserInfoLoaded = true;
+      _isRecordsLoaded = true;
+    });
+  }
+
+  // 유저 정보 및 스윙 방향을 가져오는 함수
+  Future<void> fetchUserInfo() async {
+    try {
+      final token = await storage.read(key: 'jwt_token');
+      final response = await http.get(
+          Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _userNickname = data['user_nickname'] ?? 'Unknown User';
+          _userEmail = data['user_email'] ?? 'Unknown Email';
+          _swingDir = data['batting_side'] == 0 ? '오른손' : '왼손';
+          _isUserInfoLoaded = true;
+          _isLoaded = true;
+        });
+      } else {
+        throw Exception('Failed to load user info');
+      }
+    } catch (e) {
+      print('Error fetching user info: $e');
+    }
+  }
+
+  Future<void> fetchRecords() async {
+    if (!_isUserInfoLoaded) {
+      print('User info not loaded yet, skipping records fetch');
+      return;
+    }
+    try {
+      final response = await http.get(
+        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/analysis/results?user_email=$_userEmail'),
+      );
+
+      print('Response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        setState(() {
+          for (var record in data) {
+            // 각 레코드의 datetime을 'yyyy/MM/dd HH:mm:ss' 형식으로 변환
+            record as Map<String, dynamic>;
+            String formattedDate = record['analysis_date'].replaceAll('T', ' ').substring(0, 19);
+            records.add({
+              'fileId': record['analysis_id'],
+              'datetime': formattedDate,
+              'score': '${record['analysis_score']}점',
+            });
+          }
+        }
+        );
+      } else {
+        throw Exception('Failed to load records ${jsonDecode(response.body)['message']}');
+      }
+    } catch (e) {
+      print('Error fetching records: $e');
+      setState(() {
+        records.add({ 'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
+        _isRecordsLoaded = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    if (!_isUserInfoLoaded || !_isRecordsLoaded) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.green),
+        ),
+      );
+    }
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          UserInfoHeader(username: _userNickname, swingDir: _swingDir, records: records),
+          // Divider는 Padding 밖에 둬서 끝까지 퍼지게
+          Divider(
+            color: Color(0xFFE6F5E6),
+            thickness: 15,
+            height: 15,
+          ),
+          AnalysisResultList(records: records),
+        ],
+      ),
+    );
+  }
+}
+
+// 1. 유저정보 헤더 영역
+class UserInfoHeader extends StatelessWidget {
+  final String username;
+  final String swingDir;
+  final List<Map<String, String>> records;
+
+  UserInfoHeader({
+    required this.username,
+    required this.swingDir,
+    required this.records,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
     // 최고 점수 및 날짜 계산
-    int maxScore = -1;
+    double maxScore = -1;
     String maxScoreDate = '';
-    int totalScore = 0;
+    double totalScore = 0;
     for (var record in records) {
-      int score = int.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
+      if (!record.containsKey('score') || !record.containsKey('datetime')) continue;
+      double score = double.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
       totalScore += score;
       if (score > maxScore) {
         maxScore = score;
@@ -24,90 +165,90 @@ class MyPage extends StatelessWidget {
       }
     }
     double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
+    // 위젯 빌드
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 상단정보, Padding 안쪽 내용
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 라벨 한 줄
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildLabel('스윙 방향'),
-                    _verticalDivider(),
-                    _buildLabel('최고 점수'),
-                    _verticalDivider(),
-                    _buildLabel('평균 점수'),
-                  ],
-                ),
-                SizedBox(height: 8),
-                // 값 한 줄
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildValue('우타'),
-                    _verticalDivider(),
-                    Tooltip(
-                      message: maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
-                      child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
-                    ),
-                    _verticalDivider(),
-                    _buildValue(records.isNotEmpty ? '${avgScore.toStringAsFixed(1)}점' : '-'),
-                  ],
-                ),
-                SizedBox(height: 40),
-              ],
-            ),
-          ),
-
-          // Divider는 Padding 밖에 둬서 끝까지 퍼지게
-          Divider(
-            color: Color(0xFFE6F5E6),
-            thickness: 15,
-            height: 15,
-          ),
-
-          // 분석결과 기록 제목
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
-            child: Text(
-              '분석결과 기록',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+          // 제목 + 설정 버튼
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '개인정보',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-            ),
-          ),
-
-          Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.only(top: 10),
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                return _buildRecordTile(
-                  records[index]['datetime']!,
-                  records[index]['score']!,
-                );
-              },
-              separatorBuilder: (context, index) => Divider(
-                color: Color(0xFFD9D9D9),
-                thickness: 1,
-                height: 10,
+              IconButton(
+                // 오른쪽 위 아이콘 + -> 톱니바퀴
+                icon: Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+                  );
+                },
               ),
-            ),
+            ],
           ),
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[200],
+                ),
+                child: const Icon(Icons.person, size: 30, color: Colors.grey),
+              ),
+              SizedBox(width: 12),
+              Text(
+                '$username 님',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildLabel('스윙 방향'),
+                  _verticalDivider(),
+                  _buildLabel('최고 점수'),
+                  _verticalDivider(),
+                  _buildLabel('평균 점수'),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildValue(swingDir),
+                  _verticalDivider(),
+                  Tooltip(
+                    message: maxScoreDate.isNotEmpty
+                        ? '달성일: $maxScoreDate'
+                        : '',
+                    child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
+                  ),
+                  _verticalDivider(),
+                  _buildValue(records.isNotEmpty
+                      ? '${avgScore.toStringAsFixed(2)}점'
+                      : '-'),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 40),
         ],
       ),
     );
   }
-
   // 라벨 빌더
   Widget _buildLabel(String label) {
     return SizedBox(
@@ -153,37 +294,97 @@ class MyPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  // 분석결과 리스트 항목
-  Widget _buildRecordTile(String datetime, String score) {
+// 2. 분석결과 리스트 전체
+class AnalysisResultList extends StatelessWidget {
+  final List<Map<String, String>> records;
+
+  const AnalysisResultList({required this.records, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 0),
+            child: Text(
+              '분석결과 기록',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.only(top: 10),
+              itemCount: records.length,
+              itemBuilder: (context, index) => AnalysisRecordTile(
+                fileId: records[index]['fileId'] ?? 'null',
+                datetime: records[index]['datetime']!,
+                score: records[index]['score']!,
+              ),
+              separatorBuilder: (_, __) => Divider(
+                color: Color(0xFFD9D9D9),
+                thickness: 1,
+                height: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 4. 분석결과 리스트 항목 위젯
+class AnalysisRecordTile extends StatelessWidget {
+  final String? fileId;
+  final String datetime;
+  final String score;
+
+  const AnalysisRecordTile({
+    required this.fileId,
+    required this.datetime,
+    required this.score,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 4),
       title: Text(
         datetime,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 19,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             score,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 21,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 21),
           ),
           SizedBox(width: 14),
-          Icon(
-            Icons.chevron_right,
-            size: 35,
-          ),
+          Icon(Icons.chevron_right, size: 35),
         ],
       ),
       onTap: () {
         print('클릭된 시간: $datetime');
+        if (fileId == 'null') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('데이터가 존재하지 않습니다.')),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultUIPage(
+              fileId!, double.parse(score.replaceAll('점', '')),
+            ),
+          ),
+        );
       },
     );
   }

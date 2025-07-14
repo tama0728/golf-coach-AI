@@ -67,6 +67,7 @@ class _LoginPageState extends State<LoginPage> {
 
         // 토큰 안전하게 저장
         await storage.write(key: 'jwt_token', value: token);
+        await storage.write(key: "email", value: id);
 
         // ★ 자동로그인 체크값 저장
         if (_autoLoginChecked) {
@@ -132,10 +133,12 @@ class _LoginPageState extends State<LoginPage> {
         resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 밀리게 함
         backgroundColor: Colors.transparent,
         body: Center(
-          child: SingleChildScrollView(
-            child: Center(
+          child: SingleChildScrollView( // 키보드 때문에 overflow 방지
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height,
               child: Container(
                 width: 400,
+                height: 580,
                 margin: EdgeInsets.fromLTRB(35, 240, 35, 100),
                 decoration: BoxDecoration(
                   color: const Color(0xFFA0C3A0),
@@ -236,9 +239,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       SizedBox(height: 10),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 16,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           TextButton(
                             onPressed: () {

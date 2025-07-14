@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
-import 'package:archive/archive.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:math' as math;
 
@@ -118,35 +117,6 @@ class _ProcessPageState extends State<ProcessPage> {
       return '';
     }
   }
-
-  // Future<void> _downloadAndExtractZip() async {
-  //   final zipUrl = _resultJsonData?['zip_url'];
-  //   if (zipUrl == null || zipUrl.isEmpty) {
-  //     setState(() => _errorMessage = 'ZIP URL이 없습니다');
-  //     return;
-  //   }
-  //   try {
-  //     // setState(() => _isZipLoading = true);
-  //     final response = await http.get(Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/$zipUrl'));
-  //     final archive = ZipDecoder().decodeBytes(response.bodyBytes);
-  //     final tempDir = await getTemporaryDirectory();
-  //     final imageFiles = <File>[];
-  //     for (final file in archive) {
-  //       if (file.isFile && (file.name.endsWith('.png') || file.name.endsWith('.jpg'))) {
-  //         final filename = '${tempDir.path}/${file.name}';
-  //         final outputFile = File(filename);
-  //         await outputFile.create(recursive: true);
-  //         await outputFile.writeAsBytes(file.content);
-  //         imageFiles.add(outputFile);
-  //       }
-  //     }
-  //     setState(() => _imageFiles = imageFiles.take(3).toList());
-  //   } catch (e) {
-  //     setState(() => _errorMessage = 'ZIP 처리 오류: $e');
-  //   } finally {
-  //     setState(() => _isZipLoading = true);
-  //   }
-  // }
 
   Future<String> _downloadAddressImage() async {
     _isAddressImageLoading = false;
@@ -263,10 +233,6 @@ class _ProcessPageState extends State<ProcessPage> {
       setState(() => _errorMessage = '스윙 분석 데이터 불러오기 오류: $e');
       return '';
     }
-  }
-
-  // upload analysis information
-  Future<void> _uploadAnalysisInfo() async {
   }
 
   Future<void> _fetchResultData() async {
