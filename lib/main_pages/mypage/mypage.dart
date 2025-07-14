@@ -57,6 +57,7 @@ class _MyPageState extends State<MyPage> {
           _userEmail = data['user_email'] ?? 'Unknown Email';
           _swingDir = data['batting_side'] == 0 ? '오른손' : '왼손';
           _isUserInfoLoaded = true;
+          _isLoaded = true;
         });
       } else {
         throw Exception('Failed to load user info');
@@ -98,7 +99,8 @@ class _MyPageState extends State<MyPage> {
     } catch (e) {
       print('Error fetching records: $e');
       setState(() {
-        records.add({ 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
+        records.add({ 'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
+        _isRecordsLoaded = false;
       });
     }
   }
@@ -236,7 +238,7 @@ class UserInfoHeader extends StatelessWidget {
                   ),
                   _verticalDivider(),
                   _buildValue(records.isNotEmpty
-                      ? '${avgScore.toStringAsFixed(1)}점'
+                      ? '${avgScore.toStringAsFixed(2)}점'
                       : '-'),
                 ],
               ),
@@ -318,7 +320,7 @@ class AnalysisResultList extends StatelessWidget {
               padding: EdgeInsets.only(top: 10),
               itemCount: records.length,
               itemBuilder: (context, index) => AnalysisRecordTile(
-                fileId: records[index]['fileId']!,
+                fileId: records[index]['fileId'] ?? 'null',
                 datetime: records[index]['datetime']!,
                 score: records[index]['score']!,
               ),
@@ -369,6 +371,12 @@ class AnalysisRecordTile extends StatelessWidget {
       ),
       onTap: () {
         print('클릭된 시간: $datetime');
+        if (fileId == 'null') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('데이터가 존재하지 않습니다.')),
+          );
+          return;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
