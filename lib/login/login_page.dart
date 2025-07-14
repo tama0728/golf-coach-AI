@@ -132,30 +132,16 @@ class _LoginPageState extends State<LoginPage> {
       child: Scaffold(
         resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 밀리게 함
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: SingleChildScrollView( // 키보드 때문에 overflow 방지
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height,
-              child: Container(
-                width: 400,
-                height: 580,
-                margin: EdgeInsets.fromLTRB(35, 240, 35, 100),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFA0C3A0),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView( // 키보드 때문에 overflow 방지
+              child: SizedBox(
+                height: null, // 높이 제한 해제
                 child: Container(
-                  margin: EdgeInsets.all(12),
-                  padding: EdgeInsets.all(24),
+                  width: 400,
+                  margin: EdgeInsets.fromLTRB(35, 60, 35, 60), // 상단 마진 조정
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE6F5E6),
+                    color: const Color(0xFFA0C3A0),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -165,102 +151,117 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'LOGIN',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 20),
-                      StreamBuilder<String>(
-                        stream: bloc.email,
-                        builder: (context, snapshot) => TextField(
-                          controller: _idController,
-                          onChanged: bloc.emailChanged,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Enter user email",
-                            labelText: "User email",
-                            errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                  child: Container(
+                    margin: EdgeInsets.all(12),
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F5E6),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'LOGIN',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 20),
+                        StreamBuilder<String>(
+                          stream: bloc.email,
+                          builder: (context, snapshot) => TextField(
+                            controller: _idController,
+                            onChanged: bloc.emailChanged,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              hintText: "Enter user email",
+                              labelText: "User email",
+                              errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 20),
-                      StreamBuilder<String>(
-                        stream: bloc.password,
-                        builder: (context, snapshot) => TextField(
-                          controller: _pwController,
-                          onChanged: bloc.passwordChanged,
-                          keyboardType: TextInputType.text,
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Enter password",
-                            labelText: "Password",
-                            errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                        SizedBox(height: 20),
+                        StreamBuilder<String>(
+                          stream: bloc.password,
+                          builder: (context, snapshot) => TextField(
+                            controller: _pwController,
+                            onChanged: bloc.passwordChanged,
+                            keyboardType: TextInputType.text,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              hintText: "Enter password",
+                              labelText: "Password",
+                              errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 20),
-                      // ★ 자동로그인 체크박스 추가
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _autoLoginChecked,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _autoLoginChecked = value ?? false;
-                              });
-                            },
+                        SizedBox(height: 20),
+                        // ★ 자동로그인 체크박스 추가
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _autoLoginChecked,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _autoLoginChecked = value ?? false;
+                                });
+                              },
+                            ),
+                            Text('자동 로그인'),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _handleLogin,
+                            child: Text('로그인'),
                           ),
-                          Text('자동 로그인'),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _handleLogin,
-                          child: Text('로그인'),
                         ),
-                      ),
-                      SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => SignupPage1()),
-                            );
-                          },
-                          child: Text('회원가입'),
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton(
+                        SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
                             onPressed: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => FindIDPage()),
+                                MaterialPageRoute(builder: (context) => SignupPage1()),
                               );
                             },
-                            child: Text('아이디 찾기'),
+                            child: Text('회원가입'),
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => FindPWPage()),
-                              );
-                            },
-                            child: Text('비밀번호 찾기'),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => FindIDPage()),
+                                );
+                              },
+                              child: Text('아이디 찾기'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (context) => FindPWPage()),
+                                );
+                              },
+                              child: Text('비밀번호 찾기'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

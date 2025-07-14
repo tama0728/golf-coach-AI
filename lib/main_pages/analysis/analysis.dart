@@ -375,6 +375,17 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> uploadResultData() async {
+    // 로딩 화면 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 사용자가 화면을 닫지 못하도록 설정
+      builder: (BuildContext context) {
+        return Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
     try {
       print('Fetching result data for video: $_videoPath');
       var request = http.MultipartRequest(

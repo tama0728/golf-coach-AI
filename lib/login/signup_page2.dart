@@ -31,6 +31,7 @@ class _SignupPage2State extends State<SignupPage2> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isEmailValid = false;
+  bool _isCodeValid = false; // 이메일 형식 유효성 검사 상태
   bool _isPwValid = false;
   bool _codeSent = false; // 인증번호 발송 여부 상태 추가
   String? _verificationCode; // 실제 인증번호 저장
@@ -41,6 +42,20 @@ class _SignupPage2State extends State<SignupPage2> {
   String? user_pw;
   String? phone_num;
   String? _code;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
 
   // handel id  // 아이디 중복확인
   Future<void> _handleCheckEmail() async {
@@ -71,80 +86,50 @@ class _SignupPage2State extends State<SignupPage2> {
           _errorMessage = '이메일 사용 가능';
           _isEmailValid = true;
         });
+        // 이메일 사용가능 팝업
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이메일 사용 가능합니다. 인증번호를 발송해주세요.')),
+        );
+        return ;
         // 버튼을 인증번호 발송으로 변경
       } else if (response.statusCode == 400) {
         setState(() {
           _errorMessage = '이미 사용 중인 이메일입니다.';
           _isEmailValid = false;
         });
-        // 기존과 동일하게 에러 메시지 출력
-        return showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Error'),
-              content: Text(_errorMessage ?? 'Unknown error'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
       } else {
         setState(() {
           _errorMessage = '이메일 확인 실패: ${jsonDecode(response.body)['error']}';
           _isEmailValid = false;
         });
-        return showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Error'),
-              content: Text(_errorMessage ?? 'Unknown error'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
       }
     } catch (e) {
       setState(() {
         _errorMessage = '네트워크 오류: $e';
         _isEmailValid = false;
       });
-      return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Error'),
-            content: Text(_errorMessage ?? 'Unknown error'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Error'),
+          content: Text(_errorMessage ?? 'Unknown error'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<String> _generateRandomCode([int length = 6]) async {
@@ -157,19 +142,21 @@ class _SignupPage2State extends State<SignupPage2> {
       _isLoading = true;
       _errorMessage = null;
     });
-    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/mail/test');
+    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/mail/test');
     final code = await _generateRandomCode();
     _verificationCode = code;
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {'accept': 'application/json', 'Content-Type': 'application/json'},
         body: jsonEncode({
-          'user_email': _emailController.text.trim(),
+          'email': _emailController.text.trim(),
           'subject': '인증번호 발송',
           'text': '인증번호: $code'
         }),
       );
+      print('인증번호: $_verificationCode');
+      print('이메일: ${_emailController.text.trim()}');
       print(response.statusCode);
       print(response.body);
       if (response.statusCode == 200) {
@@ -207,45 +194,37 @@ class _SignupPage2State extends State<SignupPage2> {
       _isLoading = true;
       _errorMessage = null;
     });
-    final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/verify-code');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_email': _emailController.text.trim(),
-          'code': _codeController.text.trim(),
-        }),
-      );
-      print(response.statusCode);
-      print(response.body);
-      if (response.statusCode == 200 && jsonDecode(response.body)['success'] == true) {
-        setState(() {
-          _errorMessage = '인증 성공!';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이메일 인증이 완료되었습니다.')),
-        );
-        // 인증 성공 시 추가 처리(예: 다음 단계로 이동) 가능
-      } else {
-        setState(() {
-          _errorMessage = jsonDecode(response.body)['error'] ?? '인증 실패';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage ?? 'Unknown error')),
-        );
-      }
-    } catch (e) {
+    final inputCode = _codeController.text.trim();
+    if (inputCode.isEmpty) {
       setState(() {
-        _errorMessage = '네트워크 오류: $e';
+        _errorMessage = '인증번호를 입력해주세요.';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_errorMessage ?? 'Unknown error')),
+        SnackBar(content: Text('인증번호를 입력해주세요.')),
       );
-    } finally {
       setState(() {
-        _isLoading = false;
+        _isCodeValid = false;
       });
+      return;
+    } else if (inputCode != _verificationCode) {
+      setState(() {
+        _errorMessage = '인증번호가 일치하지 않습니다.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('인증번호가 일치하지 않습니다.')),
+      );
+      setState(() {
+        _isCodeValid = false;
+      });
+      return;
+    } else {
+      setState(() {
+        _errorMessage = '인증번호가 확인되었습니다.';
+        _isCodeValid = true; // 인증 성공 시 이메일 유효성 검사 통과
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('인증번호가 확인되었습니다.')),
+      );
     }
   }
 
@@ -270,6 +249,7 @@ class _SignupPage2State extends State<SignupPage2> {
   }
 
   void _onEmailChanged(String value) {
+    _isEmailValid = false; // 이메일 입력 시 초기화
     setState(() {
       if (!EmailValidator.validate(value.trim())) {
         _emailFormatError = '이메일 형식이 올바르지 않습니다.';
@@ -413,7 +393,8 @@ class _SignupPage2State extends State<SignupPage2> {
         _pwController.text.isNotEmpty &&
         _pwCheckController.text.isNotEmpty &&
         _passwordError == null &&
-        // _codeController.text.isNotEmpty && // 이메일 인증번호 입력 주석처리
+        _isCodeValid &&
+        _codeController.text.length == 6 &&
         _phoneController.text.replaceAll('-', '').length == 11 &&
         _userNameController.text.isNotEmpty &&
         _userNameError == null &&
@@ -454,20 +435,24 @@ class _SignupPage2State extends State<SignupPage2> {
                   style: TextStyle(color: Colors.red, fontSize: 13),
                 ),
               ),
-            // 2. 인증번호 입력
-            // _buildTextFieldWithButton(
-            //   _codeController,
-            //   '인증번호 입력',
-            //   '확인',
-            //   null, // 버튼 콜백 없음
-            // ),
-            TextField(
-              controller: _codeController,
-              decoration: InputDecoration(
-                labelText: '인증번호 입력',
-                border: OutlineInputBorder(),
-              ),
-            ),
+
+            (() {
+              VoidCallback? codeButtonCallback;
+              // if (_codeController.text.length == 6) {
+                codeButtonCallback = _codeController.text.length == 6
+                    ? () { _handleVerifyCode(); }
+                    : null; // 인증번호 입력 버튼은 이메일이 유효할 때만 활성화
+              // }
+              return
+              // 2. 인증번호 입력
+              _buildTextFieldWithButton(
+                _codeController,
+                '인증번호 입력',
+                '확인',
+                codeButtonCallback,
+              );
+            })(),
+
             SizedBox(height: 16),
             // 3. 비밀번호
             TextField(

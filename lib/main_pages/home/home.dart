@@ -51,9 +51,9 @@ class _HomePageState extends State<HomePage> {
 
   // 추천 영상 URL만 저장
   final List<String> recommendedVideoUrls = [
-    'https://www.youtube.com/watch?v=cYhctBZPzGQ',
-    'https://www.youtube.com/watch?v=xQn_Jz2hKKs&list=RDxQn_Jz2hKKs&start_radio=1',
-    'https://www.youtube.com/watch?v=XgCiK1-iSY8',
+    'https://youtu.be/WICoTVgv1CM?si=nTYtdD91R5hfk5rr',
+    'https://youtu.be/oQeS4TPiC7Q?si=vD-dzLi1PoBAgmV9',
+    'https://youtu.be/bSXL5O773O4?si=xfSaxEZ9L8IAK_dI',
   ];
 
   // 실제 표시할 추천 영상 정보

@@ -52,12 +52,13 @@ class _ResultUIPageState extends State<ResultUIPage> {
   File _topImageFile = File('');
   File _contactImageFile = File('');
 
+  bool _isVideoLoading = false;
   bool _isAddressImageLoading = false;
   bool _isTopImageLoading = false;
   bool _isContactImageLoading = false;
-
   bool _isScoreLoading = false;
   bool _isSwingAnalysis = false;
+
   List<SwingAnalysis> _swingAnalysisList = [];
   Map<String, dynamic> _scoreData = {};
 
@@ -203,6 +204,35 @@ class _ResultUIPageState extends State<ResultUIPage> {
     );
   }
 
+  Widget buildLoadingScreen() {
+    int totalTasks = 7;
+    int completedTasks = (_isAddressImageLoading ? 1 : 0) +
+        (_isTopImageLoading ? 1 : 0) +
+        (_isContactImageLoading ? 1 : 0) +
+        (_isVideoLoading ? 2 : 0) +
+        (_isScoreLoading ? 1 : 0) +
+        (_isSwingAnalysis ? 1 : 0);
+    double progress = (completedTasks / totalTasks) * 100;
+
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              value: completedTasks / totalTasks, // Progress as a fraction
+            ),
+            SizedBox(height: 16),
+            Text(
+              '${progress.toStringAsFixed(0)}%', // Display percentage
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     _isLoaded = _isAddressImageLoading && _isTopImageLoading && _isContactImageLoading && _isScoreLoading && _isSwingAnalysis;
@@ -214,7 +244,7 @@ class _ResultUIPageState extends State<ResultUIPage> {
         body: Center(
           child: _errorMessage != null
               ? Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 16))
-              : const CircularProgressIndicator(),
+              : buildLoadingScreen(),
         ),
       );
     } else {
@@ -272,7 +302,7 @@ class _ResultUIPageState extends State<ResultUIPage> {
     if (url.isEmpty) {
       setState(() {
         _errorMessage = '다운로드 URL이 없습니다.';
-        _isLoaded = false;
+        _isVideoLoading = false;
       });
       return '';
     }
@@ -290,7 +320,7 @@ class _ResultUIPageState extends State<ResultUIPage> {
         if (mounted) {
           setState(() {
             _errorMessage = '영상 로딩 실패: $e';
-            _isLoaded = false;
+            _isVideoLoading = false;
           });
         }
         throw e; // 필요시 주석 처리
@@ -301,14 +331,14 @@ class _ResultUIPageState extends State<ResultUIPage> {
         _controller = controller
           ..play()
           ..setLooping(true);
-        _isLoaded = true;
+        _isVideoLoading = true;
       });
       return videoPath;
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = '영상 다운로드 실패: $e';
-          _isLoaded = false;
+          _isVideoLoading = false;
         });
       }
       return '';
@@ -575,25 +605,22 @@ class ResultTabPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                comment,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '($score점)',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
+          Text(
+            textAlign: TextAlign.left,
+            comment,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          Text(
+            textAlign: TextAlign.left,
+            '(${score.toStringAsFixed(2)}점)',
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 16),
           ClipRRect(
