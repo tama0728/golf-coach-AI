@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -289,16 +290,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
           // 카메라 미리보기
           SizedBox.expand(
             child: FittedBox(
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               child: SizedBox(
-                width: _controller!.value.previewSize!.height,
-                height: _controller!.value.previewSize!.width,
+                width: _controller!.value.previewSize!.width,
                 child:
-                  // Platform.isIOS ? Transform(
-                  //         alignment: Alignment.center,
-                  //         transform: Matrix4.rotationY(math.pi),
-                  //         child: CameraPreview(_controller!),
-                  //       ) :
+                  Platform.isAndroid ? Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.rotationY(math.pi),
+                          child: CameraPreview(_controller!),
+                        ) :
                 CameraPreview(_controller!),
               ),
             ),

@@ -23,13 +23,6 @@ class _MyPageState extends State<MyPage> {
   bool _isUserInfoLoaded = false;
   bool _isRecordsLoaded = false;
 
-  // final List<Map<String, String>> records = [
-  //   {'datetime': '2025/01/13 13:20:48', 'score': '70점'},
-  //   {'datetime': '2025/02/05 17:45:17', 'score': '62점'},
-  //   {'datetime': '2025/02/14 11:30:33', 'score': '85점'},
-  //   {'datetime': '2025/05/20 09:40:22', 'score': '91점'},
-  // ];
-
   @override
   void initState() {
     super.initState();
@@ -105,7 +98,7 @@ class _MyPageState extends State<MyPage> {
     } catch (e) {
       print('Error fetching records: $e');
       setState(() {
-        records = [{ 'datetime': '데이터를 불러올 수 없습니다', 'score': '' }];
+        records.add({ 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
       });
     }
   }

@@ -65,9 +65,8 @@ class _ResultUIPageState extends State<ResultUIPage> {
   late final Directory _appDir;
 
   @override
-  void initState() async {
+  void initState() {
     super.initState();
-    _appDir = await getTemporaryDirectory();
     _fetchResultData();
   }
 
@@ -454,6 +453,7 @@ class _ResultUIPageState extends State<ResultUIPage> {
   }
 
   Future<void> _fetchResultData() async {
+    _appDir = await getTemporaryDirectory();
     try {
         _resultJsonData = {
           "file_id": _fileId,
