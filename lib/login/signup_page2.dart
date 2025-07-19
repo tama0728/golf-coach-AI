@@ -438,11 +438,12 @@ class _SignupPage2State extends State<SignupPage2> {
 
             (() {
               VoidCallback? codeButtonCallback;
-              // if (_codeController.text.length == 6) {
-                codeButtonCallback = _codeController.text.length == 6
-                    ? () { _handleVerifyCode(); }
-                    : null; // 인증번호 입력 버튼은 이메일이 유효할 때만 활성화
-              // }
+              codeButtonCallback = _codeController.text.length == 6
+                  ? () { _handleVerifyCode(); }
+                  : () {
+                _isCodeValid = false;
+                return;
+              }; // 인증번호 입력 버튼은 이메일이 유효할 때만 활성화
               return
               // 2. 인증번호 입력
               _buildTextFieldWithButton(

@@ -15,6 +15,8 @@ import 'result_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'dart:typed_data';
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -89,16 +91,30 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
     try {
       final XFile video = await _controller!.stopVideoRecording();
-      final Directory appDir = await getTemporaryDirectory();
-      final String newPath = '${appDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
-      await File(video.path).copy(newPath);
+      // final Directory appDir = await getTemporaryDirectory();
+      final Directory? appDir = await getExternalStorageDirectory();
+      final String newPath = '${appDir!.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
+
       setState(() {
         _isRecording = false;
-        _timer?.cancel();
         _recordingDuration = Duration.zero;
-        _videoPath = newPath;
         _isEditing = true;
       });
+
+      // 안드로이드인 경우 영상 회전
+      if (Platform.isAndroid) {
+        // 회전정보 삭제
+        await _rotateVideo(video.path, newPath);
+      } else {
+        // iOS나 다른 플랫폼에서는 단순히 복사
+        await File(video.path).copy(newPath);
+      }
+
+      setState(() {
+        _timer?.cancel();
+        _videoPath = newPath;
+      });
+
       _trimmer = Trimmer();
       await _trimmer!.loadVideo(videoFile: File(_videoPath!));
       setState(() {});
@@ -463,4 +479,38 @@ class _AnalysisPageState extends State<AnalysisPage> {
       });
     }
   }
+
+  Future<void> _rotateVideo(String inputPath, String outputPath) async {
+    // 로딩 다이얼로그 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              )
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+    // FFmpeg을 사용하여 비디오 회전
+    await FFmpegKit.execute(
+      '-i $inputPath -vf "sidedata=delete" -c:v libx264 -preset ultrafast $outputPath'
+    );
+    Navigator.of(context, rootNavigator: true).pop();
+
+    } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop();
+      print('비디오 회전 중 오류 발생: $e');
+    }
+}
 }
