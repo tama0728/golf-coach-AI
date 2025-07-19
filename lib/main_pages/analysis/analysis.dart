@@ -91,8 +91,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
     try {
       final XFile video = await _controller!.stopVideoRecording();
-      // final Directory appDir = await getTemporaryDirectory();
-      final Directory? appDir = await getExternalStorageDirectory();
+      final Directory appDir = await getTemporaryDirectory();
       final String newPath = '${appDir!.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
 
       setState(() {
