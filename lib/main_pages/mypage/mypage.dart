@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'edit_body_info.dart';
+import '../../providers/profile_image_provider.dart';
 
 class MyPage extends StatelessWidget {
   final String username = '김수뭉';
@@ -70,6 +72,8 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
   Widget _buildProfileOption(String path) {
     return GestureDetector(
       onTap: () {
+        // 프로필 이미지 변경 상태 저장
+        Provider.of<ProfileImageProvider>(context, listen: false).setImagePath(path);
         setState(() {
           selectedImage = path;
         });
@@ -216,6 +220,7 @@ class AnalysisRecordTile extends StatelessWidget {
   }
 }
 
+// 프로필 이미지 선택
 class ProfileImageSelector extends StatefulWidget {
   const ProfileImageSelector({super.key});
 

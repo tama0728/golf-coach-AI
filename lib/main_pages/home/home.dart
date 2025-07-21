@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../analysis/analysis.dart';
 import '../main_page.dart';
 import '../more/notice/notice.dart';
 import '../more/notice/notice_detail_page.dart';
+import '../../providers/profile_image_provider.dart';
+import '../mypage/mypage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -102,20 +105,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProfileSection(BuildContext context) {
+    final profileImage = Provider.of<ProfileImageProvider>(context).imagePath;
+
     return GestureDetector(
       onTap: () {
         MainPage.currentState?.updateIndex(3);
       },
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[200],
-            ),
-            child: const Icon(Icons.person, size: 30, color: Colors.grey),
+          // 프로필 이미지
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: AssetImage(profileImage),
           ),
           const SizedBox(width: 12),
           Column(
