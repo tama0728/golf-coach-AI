@@ -50,7 +50,15 @@ class BodyInfoHeader extends StatefulWidget {
 }
 
 class _BodyInfoHeaderState extends State<BodyInfoHeader> {
-  String selectedImage = 'assets/profile/profile1.png';
+  // 홈 -> 마이페이지 이동시 프로필 사진 profile1.png로 변경되는 문제 해결
+  late String selectedImage;
+
+  @override
+  void initState() {
+    super.initState();
+    final provider = Provider.of<ProfileImageProvider>(context, listen: false);
+    selectedImage = provider.imagePath;
+  }
 
   void _selectProfileImage() {
     showModalBottomSheet(
