@@ -211,6 +211,7 @@ class UserInfoHeader extends StatelessWidget {
               ),
             ],
           ),
+          SizedBox(height: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
