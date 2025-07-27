@@ -53,6 +53,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
 
   ffmpeg_kit_flutter_new: ^2.0.0
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:
