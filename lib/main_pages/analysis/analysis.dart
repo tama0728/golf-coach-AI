@@ -17,6 +17,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -99,9 +100,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
         _recordingDuration = Duration.zero;
         _isEditing = true;
       });
-
+      if (kIsWeb) {
+        // 웹에서는 파일을 Blob으로 처리
+        final Uint8List videoBytes = await video.readAsBytes();
+        final File newFile = File(newPath);
+        await newFile.writeAsBytes(videoBytes);
+      }
       // 안드로이드인 경우 영상 회전
-      if (Platform.isAndroid) {
+      else if (Platform.isAndroid) {
         // 회전정보 삭제
         await _rotateVideo(video.path, newPath);
       } else {
@@ -309,6 +315,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               child: SizedBox(
                 width: _controller!.value.previewSize!.width,
                 child:
+                  kIsWeb ? CameraPreview(_controller!) :
                   Platform.isAndroid ? Transform(
                           alignment: Alignment.center,
                           transform: Matrix4.rotationY(math.pi),
