@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../../providers/profile_image_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'edit_body_info.dart';
@@ -121,6 +123,7 @@ class _MyPageState extends State<MyPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          BodyInfoHeader(username: _userNickname, swingDir: _swingDir),
           UserInfoHeader(username: _userNickname, swingDir: _swingDir, records: records),
           // Divider는 Padding 밖에 둬서 끝까지 퍼지게
           Divider(
@@ -129,6 +132,123 @@ class _MyPageState extends State<MyPage> {
             height: 15,
           ),
           AnalysisResultList(records: records),
+        ],
+      ),
+    );
+  }
+}
+
+// 0. 닉네임 아이콘 헤더 영역
+class BodyInfoHeader extends StatefulWidget {
+  final String username;
+  final String swingDir;
+
+  const BodyInfoHeader({
+    required this.username,
+    required this.swingDir,
+    super.key,
+  });
+
+  @override
+  State<BodyInfoHeader> createState() => _BodyInfoHeaderState();
+}
+
+class _BodyInfoHeaderState extends State<BodyInfoHeader> {
+  // 홈 -> 마이페이지 이동시 프로필 사진 profile1.png로 변경되는 문제 해결
+  late String selectedImage;
+
+  @override
+  void initState() {
+    super.initState();
+    final provider = Provider.of<ProfileImageProvider>(context, listen: false);
+    selectedImage = provider.imagePath;
+  }
+
+  void _selectProfileImage() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SizedBox(
+        height: 150,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildProfileOption('assets/profile/profile1.png'),
+            _buildProfileOption('assets/profile/profile2.png'),
+            _buildProfileOption('assets/profile/profile3.png'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileOption(String path) {
+    return GestureDetector(
+      onTap: () {
+        // 프로필 이미지 변경 상태 저장
+        Provider.of<ProfileImageProvider>(context, listen: false).setImagePath(path);
+        setState(() {
+          selectedImage = path;
+        });
+        Navigator.pop(context);
+      },
+      child: CircleAvatar(
+        radius: 30,
+        backgroundImage: AssetImage(path),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 제목 + 설정 버튼
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '개인정보',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              // 프로필 사진
+              GestureDetector(
+                onTap: _selectProfileImage,
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundImage: AssetImage(selectedImage),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // 닉네임 / 방향
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.username} 님',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // const SizedBox(height: 20),
         ],
       ),
     );
@@ -167,51 +287,51 @@ class UserInfoHeader extends StatelessWidget {
     double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
     // 위젯 빌드
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 제목 + 설정 버튼
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '개인정보',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                // 오른쪽 위 아이콘 + -> 톱니바퀴
-                icon: Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey[200],
-                ),
-                child: const Icon(Icons.person, size: 30, color: Colors.grey),
-              ),
-              SizedBox(width: 12),
-              Text(
-                '$username 님',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+          //     Text(
+          //       '개인정보',
+          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          //     ),
+          //     IconButton(
+          //       // 오른쪽 위 아이콘 + -> 톱니바퀴
+          //       icon: Icon(Icons.settings),
+          //       onPressed: () {
+          //         Navigator.push(
+          //           context,
+          //           MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+          //         );
+          //       },
+          //     ),
+          //   ],
+          // ),
+          // SizedBox(height: 16),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.start,
+          //   children: [
+          //     Container(
+          //       width: 48,
+          //       height: 48,
+          //       decoration: BoxDecoration(
+          //         shape: BoxShape.circle,
+          //         color: Colors.grey[200],
+          //       ),
+          //       child: const Icon(Icons.person, size: 30, color: Colors.grey),
+          //     ),
+          //     SizedBox(width: 12),
+          //     Text(
+          //       '$username 님',
+          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          //     ),
+          //   ],
+          // ),
+          // SizedBox(height: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -245,7 +365,7 @@ class UserInfoHeader extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 40),
+          SizedBox(height: 16),
         ],
       ),
     );
@@ -387,6 +507,62 @@ class AnalysisRecordTile extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// 프로필 이미지 선택
+class ProfileImageSelector extends StatefulWidget {
+  const ProfileImageSelector({super.key});
+
+  @override
+  State<ProfileImageSelector> createState() => _ProfileImageSelectorState();
+}
+
+class _ProfileImageSelectorState extends State<ProfileImageSelector> {
+  final List<String> imagePaths = [
+    'assets/profile1.png',
+    'assets/profile2.png',
+    'assets/profile3.png',
+  ];
+
+  String selectedImage = 'assets/profile1.png'; // 기본 이미지
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 40,
+          backgroundImage: AssetImage(selectedImage),
+        ),
+        SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          children: imagePaths.map((path) {
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  selectedImage = path;
+                });
+              },
+              child: CircleAvatar(
+                radius: 25,
+                backgroundImage: AssetImage(path),
+                // 선택된 항목 표시 테두리
+                child: selectedImage == path
+                    ? Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.green, width: 3),
+                  ),
+                )
+                    : null,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

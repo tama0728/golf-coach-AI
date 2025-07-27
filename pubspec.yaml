@@ -32,6 +32,8 @@ dependency_overrides:
 dependencies:
   flutter:
     sdk: flutter
+  # 프로필 사진 상태관리용 provider
+  provider: ^6.1.1
   flutter_localizations:
     sdk: flutter
   # The following adds the Cupertino Icons font to your application.
@@ -85,8 +87,10 @@ flutter:
     - .env
     - assets/image1.png
     - assets/guide_golfer.png
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # 프로필 이미지
+    - assets/profile/profile1.png
+    - assets/profile/profile2.png
+    - assets/profile/profile3.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

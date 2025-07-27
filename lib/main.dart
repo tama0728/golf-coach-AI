@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'login/app_start.dart';
 import 'package:flutter/services.dart'; // 화면 회전 고정용
+import 'package:provider/provider.dart';
+import 'providers/profile_image_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +15,13 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(MyApp());
+  // runApp(MyApp());
+  runApp(
+      ChangeNotifierProvider(
+        create: (_) => ProfileImageProvider(),
+        child: MyApp(),
+      )
+  );
 }
 
 class MyApp extends StatelessWidget {
