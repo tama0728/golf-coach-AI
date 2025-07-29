@@ -49,7 +49,7 @@ class CustomerCenterPage extends StatelessWidget {
           // Q&A
           ListTile(
             contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-            title: const Text('Q&A',
+            title: const Text('FAQ',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 19,
