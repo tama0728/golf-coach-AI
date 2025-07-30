@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'notice/notice.dart';
-import 'customer_center.dart';
-import 'policy.dart';
-import 'account.dart';
+import 'customer_center/customer_center.dart';
+import 'policy/policy.dart';
+import 'account/account.dart';
 
 class MorePage extends StatefulWidget {
   const MorePage({Key? key}) : super(key: key);

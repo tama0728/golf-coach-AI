@@ -74,7 +74,7 @@ class _NoticePageState extends State<NoticePage> {
               fontWeight: FontWeight.bold,
             )),
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
