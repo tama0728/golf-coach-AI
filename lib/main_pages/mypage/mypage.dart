@@ -1,131 +1,25 @@
-import 'dart:convert';
-import 'package:provider/provider.dart';
-import '../../providers/profile_image_provider.dart';
-
 import 'package:flutter/material.dart';
 import 'edit_body_info.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../analysis/result_ui.dart';
 
-class MyPage extends StatefulWidget {
-@override
-_MyPageState createState() => _MyPageState();
-}
-class _MyPageState extends State<MyPage> {
-  List<Map<String, String>> records = [];
+class MyPage extends StatelessWidget {
+  final String username = '김수뭉';
+  final String swingDir = '우타';
 
-  late final String _userEmail;
-  late final String _userNickname;
-  late final String _swingDir;
-  final storage = FlutterSecureStorage();
-
-  bool _isLoaded = false;
-  bool _isUserInfoLoaded = false;
-  bool _isRecordsLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchs();
-  }
-
-  Future<void> fetchs() async {
-    // 유저 정보와 스윙 방향을 가져오는 함수
-    await fetchUserInfo();
-    // 레코드를 가져오는 함수
-    await fetchRecords();
-    setState(() {
-      _isUserInfoLoaded = true;
-      _isRecordsLoaded = true;
-    });
-  }
-
-  // 유저 정보 및 스윙 방향을 가져오는 함수
-  Future<void> fetchUserInfo() async {
-    try {
-      final token = await storage.read(key: 'jwt_token');
-      final response = await http.get(
-          Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _userNickname = data['user_nickname'] ?? 'Unknown User';
-          _userEmail = data['user_email'] ?? 'Unknown Email';
-          _swingDir = data['batting_side'] == 0 ? '오른손' : '왼손';
-          _isUserInfoLoaded = true;
-          _isLoaded = true;
-        });
-      } else {
-        throw Exception('Failed to load user info');
-      }
-    } catch (e) {
-      print('Error fetching user info: $e');
-    }
-  }
-
-  Future<void> fetchRecords() async {
-    if (!_isUserInfoLoaded) {
-      print('User info not loaded yet, skipping records fetch');
-      return;
-    }
-    try {
-      final response = await http.get(
-        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/analysis/results?user_email=$_userEmail'),
-      );
-
-      print('Response status: ${response.statusCode}');
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-        setState(() {
-          for (var record in data) {
-            // 각 레코드의 datetime을 'yyyy/MM/dd HH:mm:ss' 형식으로 변환
-            record as Map<String, dynamic>;
-            String formattedDate = record['analysis_date'].replaceAll('T', ' ').substring(0, 19);
-            records.add({
-              'fileId': record['analysis_id'],
-              'datetime': formattedDate,
-              'score': '${record['analysis_score']}점',
-            });
-          }
-        }
-        );
-      } else {
-        throw Exception('Failed to load records ${jsonDecode(response.body)['message']}');
-      }
-    } catch (e) {
-      print('Error fetching records: $e');
-      setState(() {
-        records.add({ 'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
-        _isRecordsLoaded = false;
-      });
-    }
-  }
-
+  final List<Map<String, String>> records = [
+    {'datetime': '2025/01/13 13:20:48', 'score': '70점'},
+    {'datetime': '2025/02/05 17:45:17', 'score': '62점'},
+    {'datetime': '2025/02/14 11:30:33', 'score': '85점'},
+    {'datetime': '2025/05/20 09:40:22', 'score': '91점'},
+  ];
 
   @override
   Widget build(BuildContext context) {
-    if (!_isUserInfoLoaded || !_isRecordsLoaded) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.green),
-        ),
-      );
-    }
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BodyInfoHeader(username: _userNickname, swingDir: _swingDir),
-          UserInfoHeader(username: _userNickname, swingDir: _swingDir, records: records),
-          // Divider는 Padding 밖에 둬서 끝까지 퍼지게
+          BodyInfoHeader(username: username, swingDir: swingDir),
           Divider(
             color: Color(0xFFE6F5E6),
             thickness: 15,
@@ -138,7 +32,7 @@ class _MyPageState extends State<MyPage> {
   }
 }
 
-// 0. 닉네임 아이콘 헤더 영역
+// 1. 신체정보 헤더 영역
 class BodyInfoHeader extends StatefulWidget {
   final String username;
   final String swingDir;
@@ -154,15 +48,7 @@ class BodyInfoHeader extends StatefulWidget {
 }
 
 class _BodyInfoHeaderState extends State<BodyInfoHeader> {
-  // 홈 -> 마이페이지 이동시 프로필 사진 profile1.png로 변경되는 문제 해결
-  late String selectedImage;
-
-  @override
-  void initState() {
-    super.initState();
-    final provider = Provider.of<ProfileImageProvider>(context, listen: false);
-    selectedImage = provider.imagePath;
-  }
+  String selectedImage = 'assets/profile/profile1.png';
 
   void _selectProfileImage() {
     showModalBottomSheet(
@@ -184,8 +70,6 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
   Widget _buildProfileOption(String path) {
     return GestureDetector(
       onTap: () {
-        // 프로필 이미지 변경 상태 저장
-        Provider.of<ProfileImageProvider>(context, listen: false).setImagePath(path);
         setState(() {
           selectedImage = path;
         });
@@ -241,177 +125,15 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${widget.username} 님',
+                    '${widget.username} / ${widget.swingDir}',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ],
           ),
-          // const SizedBox(height: 20),
+          const SizedBox(height: 20),
         ],
-      ),
-    );
-  }
-}
-
-// 1. 유저정보 헤더 영역
-class UserInfoHeader extends StatelessWidget {
-  final String username;
-  final String swingDir;
-  final List<Map<String, String>> records;
-
-  UserInfoHeader({
-    required this.username,
-    required this.swingDir,
-    required this.records,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-
-    // 최고 점수 및 날짜 계산
-    double maxScore = -1;
-    String maxScoreDate = '';
-    double totalScore = 0;
-    for (var record in records) {
-      if (!record.containsKey('score') || !record.containsKey('datetime')) continue;
-      double score = double.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
-      totalScore += score;
-      if (score > maxScore) {
-        maxScore = score;
-        maxScoreDate = record['datetime']!;
-      }
-    }
-    double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
-    // 위젯 빌드
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 제목 + 설정 버튼
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     Text(
-          //       '개인정보',
-          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          //     ),
-          //     IconButton(
-          //       // 오른쪽 위 아이콘 + -> 톱니바퀴
-          //       icon: Icon(Icons.settings),
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-          //         );
-          //       },
-          //     ),
-          //   ],
-          // ),
-          // SizedBox(height: 16),
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.start,
-          //   children: [
-          //     Container(
-          //       width: 48,
-          //       height: 48,
-          //       decoration: BoxDecoration(
-          //         shape: BoxShape.circle,
-          //         color: Colors.grey[200],
-          //       ),
-          //       child: const Icon(Icons.person, size: 30, color: Colors.grey),
-          //     ),
-          //     SizedBox(width: 12),
-          //     Text(
-          //       '$username 님',
-          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          //     ),
-          //   ],
-          // ),
-          // SizedBox(height: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildLabel('스윙 방향'),
-                  _verticalDivider(),
-                  _buildLabel('최고 점수'),
-                  _verticalDivider(),
-                  _buildLabel('평균 점수'),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildValue(swingDir),
-                  _verticalDivider(),
-                  Tooltip(
-                    message: maxScoreDate.isNotEmpty
-                        ? '달성일: $maxScoreDate'
-                        : '',
-                    child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
-                  ),
-                  _verticalDivider(),
-                  _buildValue(records.isNotEmpty
-                      ? '${avgScore.toStringAsFixed(2)}점'
-                      : '-'),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-  // 라벨 빌더
-  Widget _buildLabel(String label) {
-    return SizedBox(
-      width: 90,
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[800],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 값 빌더
-  Widget _buildValue(String value) {
-    return SizedBox(
-      width: 90,
-      child: Center(
-        child: Text(
-          value,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 세로 구분선
-  Widget _verticalDivider() {
-    return Container(
-      height: 40,
-      child: VerticalDivider(
-        color: Colors.grey[300],
-        thickness: 1.5,
-        width: 30,
       ),
     );
   }
@@ -441,7 +163,6 @@ class AnalysisResultList extends StatelessWidget {
               padding: EdgeInsets.only(top: 10),
               itemCount: records.length,
               itemBuilder: (context, index) => AnalysisRecordTile(
-                fileId: records[index]['fileId'] ?? 'null',
                 datetime: records[index]['datetime']!,
                 score: records[index]['score']!,
               ),
@@ -458,14 +179,12 @@ class AnalysisResultList extends StatelessWidget {
   }
 }
 
-// 4. 분석결과 리스트 항목 위젯
+// 3. 분석결과 리스트 항목 위젯
 class AnalysisRecordTile extends StatelessWidget {
-  final String? fileId;
   final String datetime;
   final String score;
 
   const AnalysisRecordTile({
-    required this.fileId,
     required this.datetime,
     required this.score,
     super.key,
@@ -477,7 +196,7 @@ class AnalysisRecordTile extends StatelessWidget {
       contentPadding: EdgeInsets.symmetric(horizontal: 30, vertical: 4),
       title: Text(
         datetime,
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -492,26 +211,11 @@ class AnalysisRecordTile extends StatelessWidget {
       ),
       onTap: () {
         print('클릭된 시간: $datetime');
-        if (fileId == 'null') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('데이터가 존재하지 않습니다.')),
-          );
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ResultUIPage(
-              fileId!, double.parse(score.replaceAll('점', '')),
-            ),
-          ),
-        );
       },
     );
   }
 }
 
-// 프로필 이미지 선택
 class ProfileImageSelector extends StatefulWidget {
   const ProfileImageSelector({super.key});
 
@@ -566,3 +270,4 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
     );
   }
 }
+
