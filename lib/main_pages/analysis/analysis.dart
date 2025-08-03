@@ -15,9 +15,7 @@ import 'result_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:path/path.dart' as p;
 
 class AnalysisPage extends StatefulWidget {
   @override
@@ -41,6 +39,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Map<String, dynamic>? _resultJsonData;
   bool _isLoaded = false;
   String? _errorMessage;
+  double _uploadProgress = 0.0; // 업로드 진행률 상태 변수 추가
 
   List<CameraDescription> _cameras = [];
   int _selectedCameraIdx = 0;
@@ -48,6 +47,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
   @override
   void initState() {
     super.initState();
+    // 화면 방향을 세로로 고정
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     _initializeCamera();
   }
 
@@ -62,6 +66,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
     // 사용 가능한 카메라 목록 가져오기
     _cameras = await availableCameras();
     if (_cameras.isEmpty) return;
+
+    // 전면 카메라 우선 선택 (고정)
     int frontIdx = _cameras.indexWhere((c) => c.lensDirection == CameraLensDirection.front);
     int selectedIdx = cameraIdx ?? (frontIdx != -1 ? frontIdx : 0);
     if (selectedIdx >= _cameras.length) selectedIdx = 0;
@@ -73,11 +79,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
       selectedCamera,
       ResolutionPreset.high,
       enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
 
     try {
       await _controller!.initialize();
       await _controller!.prepareForVideoRecording();  // 비디오 로딩 최적화
+
+      // 카메라 방향 센서 비활성화 (방향 고정)
+      await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
+
       setState(() {
         _isCameraInitialized = true;
       });
@@ -93,33 +104,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
     try {
       final XFile video = await _controller!.stopVideoRecording();
       final Directory appDir = await getTemporaryDirectory();
-      final String newPath = '${appDir!.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
-
+      final String newPath = '${appDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
+      await File(video.path).copy(newPath);
       setState(() {
         _isRecording = false;
+        _timer?.cancel();
         _recordingDuration = Duration.zero;
+        _videoPath = newPath;
         _isEditing = true;
       });
-      if (kIsWeb) {
-        // 웹에서는 파일을 Blob으로 처리
-        final Uint8List videoBytes = await video.readAsBytes();
-        final File newFile = File(newPath);
-        await newFile.writeAsBytes(videoBytes);
-      }
-      // 안드로이드인 경우 영상 회전
-      else if (Platform.isAndroid) {
-        // 회전정보 삭제
-        await _rotateVideo(video.path, newPath);
-      } else {
-        // iOS나 다른 플랫폼에서는 단순히 복사
-        await File(video.path).copy(newPath);
-      }
-
-      setState(() {
-        _timer?.cancel();
-        _videoPath = newPath;
-      });
-
       _trimmer = Trimmer();
       await _trimmer!.loadVideo(videoFile: File(_videoPath!));
       setState(() {});
@@ -161,6 +154,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
     _controller?.dispose();
     _videoController?.dispose();
     _trimmer?.dispose(); // 트리머 리소스 해제 추가
+
+    // 화면 방향 제한 해제
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
     super.dispose();
   }
 
@@ -207,23 +209,25 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 left: 0,
                 right: 0,
                 bottom: 90,
-                child: TrimViewer(
-                  trimmer: _trimmer!,
-                  viewerHeight: 50.0,
-                  viewerWidth: MediaQuery.of(context).size.width,
-                  maxVideoLength: const Duration(seconds: 60),
-                  showDuration: true,
-                  paddingFraction: 0.01,
-                  // numberOfFrames: 60,
-                  onChangeStart: (value) async {
-                    setState(() => _startTrim = value);
-                    final controller = _trimmer!.videoPlayerController;
-                    if (controller != null) {
-                      await controller.seekTo(Duration(milliseconds: (value * controller.value.duration.inMilliseconds).toInt()));
-                    }
-                  },
-                  onChangeEnd: (value) => setState(() => _endTrim = value),
-                  onChangePlaybackState: (value) => setState(() => _isRecording = value),
+                child: Center(
+                  child: TrimViewer(
+                    trimmer: _trimmer!,
+                    viewerHeight: 50.0,
+                    viewerWidth: MediaQuery.of(context).size.width * 0.8,
+                    maxVideoLength: const Duration(seconds: 60),
+                    showDuration: true,
+                    paddingFraction: 0.01,
+                    // numberOfFrames: 60,
+                    onChangeStart: (value) async {
+                      setState(() => _startTrim = value);
+                      final controller = _trimmer!.videoPlayerController;
+                      if (controller != null) {
+                        await controller.seekTo(Duration(milliseconds: (value * controller.value.duration.inMilliseconds).toInt()));
+                      }
+                    },
+                    onChangeEnd: (value) => setState(() => _endTrim = value),
+                    onChangePlaybackState: (value) => setState(() => _isRecording = value),
+                  ),
                 ),
               ),
               // SAVE + 재생/정지 버튼 (하단 오버레이)
@@ -253,32 +257,32 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       onPressed: _isTrimming
                           ? null
                           : () async {
-                              setState(() {
-                                _isTrimming = true;
-                              });
-                              await _trimmer!.saveTrimmedVideo(
-                                startValue: _startTrim,
-                                endValue: _endTrim,
-                                onSave: (outputPath) {
-                                  setState(() {
-                                    _isTrimming = false;
-                                  });
-                                  if (outputPath != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('성공적으로 저장되었습니다.')),
-                                    );
-                                    print('트리밍 완료: $outputPath');
-                                    _videoPath = outputPath;
-                                    // 트리밍이 성공적으로 끝난 후에만 이동
-                                    uploadResultData();
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('트리밍 실패!')),
-                                    );
-                                  }
-                                },
+                        setState(() {
+                          _isTrimming = true;
+                        });
+                        await _trimmer!.saveTrimmedVideo(
+                          startValue: _startTrim,
+                          endValue: _endTrim,
+                          onSave: (outputPath) {
+                            setState(() {
+                              _isTrimming = false;
+                            });
+                            if (outputPath != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('성공적으로 저장되었습니다.')),
                               );
-                            },
+                              print('트리밍 완료: $outputPath');
+                              _videoPath = outputPath;
+                              // 트리밍이 성공적으로 끝난 후에만 이동
+                              uploadResultData();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('트리밍 실패!')),
+                              );
+                            }
+                          },
+                        );
+                      },
                       child: Text(
                         "저장",
                         style: TextStyle(color: Colors.green),
@@ -292,12 +296,36 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ),
               ),
               // 진행 표시 (상단 오버레이)
-              if (_isTrimming)
+              if (_isTrimming || _uploadProgress > 0)
                 Positioned(
                   left: 0,
                   right: 0,
                   top: 0,
-                  child: LinearProgressIndicator(),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.6), // 반투명 배경 추가
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: _uploadProgress > 0 ? _uploadProgress : null,
+                          backgroundColor: Colors.white24,
+                          color: Colors.greenAccent,
+                          minHeight: 8,
+                        ),
+                        SizedBox(height: 8),
+                        if (_uploadProgress > 0 && _uploadProgress < 1.0)
+                          Text(
+                            '${(_uploadProgress * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -314,14 +342,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               fit: BoxFit.contain,
               child: SizedBox(
                 width: _controller!.value.previewSize!.width,
-                child:
-                  kIsWeb ? CameraPreview(_controller!) :
-                  Platform.isAndroid ? Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.rotationY(math.pi),
-                          child: CameraPreview(_controller!),
-                        ) :
-                CameraPreview(_controller!),
+                child: CameraPreview(_controller!),
               ),
             ),
           ),
@@ -333,9 +354,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
             child: Column(
               children: [
                 Text(
-                  _isRecording 
-                    ? _formatDuration(_recordingDuration)  // 촬영 시간 표시
-                    : '촬영을 시작한 후\n아래와 같은 자세를 취해주세요',
+                  _isRecording
+                      ? _formatDuration(_recordingDuration)  // 촬영 시간 표시
+                      : '촬영을 시작한 후\n아래와 같은 자세를 취해주세요',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.black,
@@ -397,36 +418,44 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> uploadResultData() async {
-    // 로딩 화면 표시
-    showDialog(
-      context: context,
-      barrierDismissible: false, // 사용자가 화면을 닫지 못하도록 설정
-      builder: (BuildContext context) {
-        return Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
-
     try {
-      print('Fetching result data for video: $_videoPath');
+      print('Fetching result data for video: \u001b[38;5;2m$_videoPath\u001b[0m');
+      var file = File(_videoPath!);
+      var total = file.lengthSync();
+      var bytesSent = 0;
+
+      var stream = http.ByteStream(file.openRead().transform(
+        StreamTransformer.fromHandlers(
+          handleData: (data, sink) {
+            bytesSent += data.length;
+            setState(() {
+              _uploadProgress = bytesSent / total;
+            });
+            sink.add(data);
+          },
+        ),
+      ));
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/upload'),
       );
       request.files.add(
-        await http.MultipartFile.fromPath(
+        http.MultipartFile(
           'video',
-          _videoPath!,
+          stream,
+          total,
+          filename: p.basename(_videoPath!),
           contentType: MediaType('video', 'mp4'),
         ),
       );
 
-      var response = await request.send();
-      print('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final responseData = await response.stream.bytesToString();
+      final streamedResponse = await request.send();
+      if (streamedResponse.statusCode == 200) {
+        setState(() {
+          _uploadProgress = 1.0;
+        });
+        final responseData = await streamedResponse.stream.bytesToString();
         final jsonData = jsonDecode(responseData) as Map<String, dynamic>;
         setState(() {
           _resultJsonData = jsonData;
@@ -436,7 +465,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
         try {
           final url = 'http://${dotenv.get('HOSTIP')}:3000/api/analysis/upload';
           print('File ID: $_fileId');
-          print("user email: ${await FlutterSecureStorage().read(key: 'email')}");
+          print("user email:  [38;5;2m${await FlutterSecureStorage().read(key: 'email')} [0m");
           final double score = jsonData['score'] ?? 0;
           final response = await http.post(
             Uri.parse(url),
@@ -471,52 +500,21 @@ class _AnalysisPageState extends State<AnalysisPage> {
         } catch (e) {
           print('Error uploading analysis info: $e');
         }
-
       } else {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
           // _isLoaded = false;
         });
       }
+      setState(() {
+        _uploadProgress = 0.0;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = '오류 발생: $e';
         // _isLoaded = false;
+        _uploadProgress = 0.0;
       });
     }
   }
-
-  Future<void> _rotateVideo(String inputPath, String outputPath) async {
-    // 로딩 다이얼로그 표시
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              )
-            ],
-          ),
-        );
-      },
-    );
-
-    try {
-    // FFmpeg을 사용하여 비디오 회전
-    await FFmpegKit.execute(
-      '-i $inputPath -vf "sidedata=delete" -c:v libx264 -preset ultrafast $outputPath'
-    );
-    Navigator.of(context, rootNavigator: true).pop();
-
-    } catch (e) {
-      Navigator.of(context, rootNavigator: true).pop();
-      print('비디오 회전 중 오류 발생: $e');
-    }
-}
 }
