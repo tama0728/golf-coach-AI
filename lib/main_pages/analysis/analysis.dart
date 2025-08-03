@@ -15,6 +15,9 @@ import 'result_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 
 class AnalysisPage extends StatefulWidget {
@@ -39,7 +42,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Map<String, dynamic>? _resultJsonData;
   bool _isLoaded = false;
   String? _errorMessage;
-  double _uploadProgress = 0.0; // 업로드 진행률 상태 변수 추가
 
   List<CameraDescription> _cameras = [];
   int _selectedCameraIdx = 0;
@@ -104,15 +106,33 @@ class _AnalysisPageState extends State<AnalysisPage> {
     try {
       final XFile video = await _controller!.stopVideoRecording();
       final Directory appDir = await getTemporaryDirectory();
-      final String newPath = '${appDir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
-      await File(video.path).copy(newPath);
+      final String newPath = '${appDir!.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
+
       setState(() {
         _isRecording = false;
-        _timer?.cancel();
         _recordingDuration = Duration.zero;
-        _videoPath = newPath;
         _isEditing = true;
       });
+      if (kIsWeb) {
+        // 웹에서는 파일을 Blob으로 처리
+        final Uint8List videoBytes = await video.readAsBytes();
+        final File newFile = File(newPath);
+        await newFile.writeAsBytes(videoBytes);
+      }
+      // 안드로이드인 경우 영상 회전
+      else if (Platform.isAndroid) {
+        // 회전정보 삭제
+        await _rotateVideo(video.path, newPath);
+      } else {
+        // iOS나 다른 플랫폼에서는 단순히 복사
+        await File(video.path).copy(newPath);
+      }
+
+      setState(() {
+        _timer?.cancel();
+        _videoPath = newPath;
+      });
+
       _trimmer = Trimmer();
       await _trimmer!.loadVideo(videoFile: File(_videoPath!));
       setState(() {});
@@ -296,36 +316,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ),
               ),
               // 진행 표시 (상단 오버레이)
-              if (_isTrimming || _uploadProgress > 0)
+              if (_isTrimming)
                 Positioned(
                   left: 0,
                   right: 0,
                   top: 0,
-                  child: Container(
-                    color: Colors.black.withOpacity(0.6), // 반투명 배경 추가
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      children: [
-                        LinearProgressIndicator(
-                          value: _uploadProgress > 0 ? _uploadProgress : null,
-                          backgroundColor: Colors.white24,
-                          color: Colors.greenAccent,
-                          minHeight: 8,
-                        ),
-                        SizedBox(height: 8),
-                        if (_uploadProgress > 0 && _uploadProgress < 1.0)
-                          Text(
-                            '${(_uploadProgress * 100).toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              shadows: [Shadow(blurRadius: 4, color: Colors.black)],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                  child: LinearProgressIndicator(),
                 ),
             ],
           ),
@@ -342,7 +338,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
               fit: BoxFit.contain,
               child: SizedBox(
                 width: _controller!.value.previewSize!.width,
-                child: CameraPreview(_controller!),
+                child:
+                kIsWeb ? CameraPreview(_controller!) :
+                Platform.isAndroid ? Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.rotationY(math.pi),
+                  child: CameraPreview(_controller!),
+                ) :
+                CameraPreview(_controller!),
               ),
             ),
           ),
@@ -418,44 +421,36 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> uploadResultData() async {
+    // 로딩 화면 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 사용자가 화면을 닫지 못하도록 설정
+      builder: (BuildContext context) {
+        return Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
     try {
-      print('Fetching result data for video: \u001b[38;5;2m$_videoPath\u001b[0m');
-      var file = File(_videoPath!);
-      var total = file.lengthSync();
-      var bytesSent = 0;
-
-      var stream = http.ByteStream(file.openRead().transform(
-        StreamTransformer.fromHandlers(
-          handleData: (data, sink) {
-            bytesSent += data.length;
-            setState(() {
-              _uploadProgress = bytesSent / total;
-            });
-            sink.add(data);
-          },
-        ),
-      ));
-
+      print('Fetching result data for video: $_videoPath');
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('http://${dotenv.get('ANALYTICS_HOST')}:5005/upload'),
       );
       request.files.add(
-        http.MultipartFile(
+        await http.MultipartFile.fromPath(
           'video',
-          stream,
-          total,
-          filename: p.basename(_videoPath!),
+          _videoPath!,
           contentType: MediaType('video', 'mp4'),
         ),
       );
 
-      final streamedResponse = await request.send();
-      if (streamedResponse.statusCode == 200) {
-        setState(() {
-          _uploadProgress = 1.0;
-        });
-        final responseData = await streamedResponse.stream.bytesToString();
+      var response = await request.send();
+      print('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
         final jsonData = jsonDecode(responseData) as Map<String, dynamic>;
         setState(() {
           _resultJsonData = jsonData;
@@ -465,7 +460,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
         try {
           final url = 'http://${dotenv.get('HOSTIP')}:3000/api/analysis/upload';
           print('File ID: $_fileId');
-          print("user email:  [38;5;2m${await FlutterSecureStorage().read(key: 'email')} [0m");
+          print("user email: ${await FlutterSecureStorage().read(key: 'email')}");
           final double score = jsonData['score'] ?? 0;
           final response = await http.post(
             Uri.parse(url),
@@ -500,21 +495,52 @@ class _AnalysisPageState extends State<AnalysisPage> {
         } catch (e) {
           print('Error uploading analysis info: $e');
         }
+
       } else {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
           // _isLoaded = false;
         });
       }
-      setState(() {
-        _uploadProgress = 0.0;
-      });
     } catch (e) {
       setState(() {
         _errorMessage = '오류 발생: $e';
         // _isLoaded = false;
-        _uploadProgress = 0.0;
       });
+    }
+  }
+
+  Future<void> _rotateVideo(String inputPath, String outputPath) async {
+    // 로딩 다이얼로그 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              )
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      // FFmpeg을 사용하여 비디오 회전
+      await FFmpegKit.execute(
+          '-i $inputPath -vf "sidedata=delete" -c:v libx264 -preset ultrafast $outputPath'
+      );
+      Navigator.of(context, rootNavigator: true).pop();
+
+    } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop();
+      print('비디오 회전 중 오류 발생: $e');
     }
   }
 }
