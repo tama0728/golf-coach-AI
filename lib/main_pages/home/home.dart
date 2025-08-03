@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../analysis/analysis.dart';
 import '../main_page.dart';
-import '../more/notice.dart';
-import '../more/notice_detail_page.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:io';
-import 'package:intl/intl.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'notice_logic.dart' as notice_logic;
-import 'package:provider/provider.dart';
-import '../../providers/profile_image_provider.dart';
+import '../more/notice/notice.dart';
+import '../more/notice/notice_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -46,114 +37,34 @@ class _HomePageState extends State<HomePage> {
   // 최고 기록 데이터
   final Map<String, dynamic> bestRecord = {'date': '', 'score': 0};
 
-  // 추천 영상 URL만 저장
-  final List<String> recommendedVideoUrls = [
-    'https://youtu.be/WICoTVgv1CM?si=nTYtdD91R5hfk5rr',
-    'https://youtu.be/oQeS4TPiC7Q?si=vD-dzLi1PoBAgmV9',
-    'https://youtu.be/bSXL5O773O4?si=xfSaxEZ9L8IAK_dI',
+  // 임시 공지사항 데이터
+  final List<Map<String, String>> notices = [
+    {'title': '공지사항 1', 'date': '2024.03.20'},
+    {'title': '공지사항 2', 'date': '2024.03.18'},
+    {'title': '공지사항 3', 'date': '2024.03.15'},
   ];
 
-  // 실제 표시할 추천 영상 정보
-  List<VideoModel> recommendedVideos = [];
-
-  final ScrollController _videoScrollController = ScrollController();
-
-  final storage = FlutterSecureStorage();
-  String? _userNicknameMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    tz.initializeTimeZones();
-    _fetchUserNickname();
-    _fetchRecommendedVideos();
-  }
-
-  @override
-  void dispose() {
-    _videoScrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _fetchRecommendedVideos() async {
-    List<VideoModel> videos = [];
-    for (final url in recommendedVideoUrls) {
-      try {
-        final oembedUrl = 'https://www.youtube.com/oembed?url=$url&format=json';
-        final response = await http.get(Uri.parse(oembedUrl));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          videos.add(VideoModel(
-            title: data['title'] ?? '',
-            thumbnailUrl: data['thumbnail_url'] ?? '',
-            videoUrl: url,
-            description: data['author_name'] ?? '',
-          ));
-        } else {
-          videos.add(VideoModel(
-            title: '제목을 불러올 수 없음',
-            thumbnailUrl: '',
-            videoUrl: url,
-            description: '',
-          ));
-        }
-      } catch (e) {
-        videos.add(VideoModel(
-          title: '제목을 불러올 수 없음',
-          thumbnailUrl: '',
-          videoUrl: url,
-          description: '',
-        ));
-      }
-    }
-    setState(() {
-      recommendedVideos = videos;
-    });
-  }
-
-  Future<void> _fetchUserNickname() async {
-    try {
-      final token = await storage.read(key: 'jwt_token');
-      final response = await http.get(
-        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          _userNicknameMessage = data['user_nickname'] ?? "사용자 정보를 불러오지 못했습니다.";
-        });
-      } else if (response.statusCode == 401) {
-        setState(() {
-          _userNicknameMessage = "로그인 정보가 유효하지 않습니다.";
-        });
-      } else if (response.statusCode == 404) {
-        setState(() {
-          _userNicknameMessage = "사용자 정보를 불러오지 못했습니다.";
-        });
-      } else {
-        setState(() {
-          _userNicknameMessage = "알 수 없는 오류가 발생했습니다.";
-        });
-      }
-    } on SocketException {
-      setState(() {
-        _userNicknameMessage = "네트워크에 연결되어 있지 않습니다.";
-      });
-    } catch (e) {
-      setState(() {
-        _userNicknameMessage = "알 수 없는 오류가 발생했습니다.";
-      });
-    }
-  }
-
-  String formatDate(String? isoString) {
-    if (isoString == null || isoString.isEmpty) return '';
-    final dateTime = DateTime.parse(isoString);
-    return DateFormat('yyyy.MM.dd HH:mm').format(dateTime);
-  }
+  // 추천 영상 데이터
+  final List<VideoModel> recommendedVideos = [
+    VideoModel(
+      title: '골프 스윙의 기본',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '골프 스윙의 기본 자세와 동작을 배워보세요.',
+    ),
+    VideoModel(
+      title: '골프 스윙 교정',
+      thumbnailUrl: 'https://img.youtube.com/vi/jWQx2f-CErU/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=jWQx2f-CErU',
+      description: '스윙 자세 교정 방법',
+    ),
+    VideoModel(
+      title: '골프 스윙 분석',
+      thumbnailUrl: 'https://img.youtube.com/vi/eDZKGr3UdaA/maxresdefault.jpg',
+      videoUrl: 'https://www.youtube.com/watch?v=eDZKGr3UdaA',
+      description: '스윙 분석과 피드백',
+    ),
+  ];
 
   // 기록 시작하기 버튼 클릭 핸들러
   void _handleStartRecord() {
@@ -191,87 +102,62 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProfileSection(BuildContext context) {
-    final profileImage = Provider.of<ProfileImageProvider>(context).imagePath;
-
     return GestureDetector(
       onTap: () {
         MainPage.currentState?.updateIndex(3);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Color(0xFFE6F5E6), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha(20),
-              blurRadius: 8,
-              offset: Offset(0, 2),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey[200],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Container(
-            //   width: 48,
-            //   height: 48,
-            //   decoration: BoxDecoration(
-            //     shape: BoxShape.circle,
-            //     color: Colors.grey[200],
-            //   ),
-            //   child: const Icon(Icons.person, size: 30, color: Colors.grey),
-            // ),
-            // 프로필 이미지
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: AssetImage(profileImage),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '안녕하세요,',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                Text(
-                  _userNicknameMessage != null
-                      ? '$_userNicknameMessage 님'
-                      : '...', // 사용자 닉네임 동적 표시
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const Spacer(),
-          ],
-        ),
+            child: const Icon(Icons.person, size: 30, color: Colors.grey),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '안녕하세요,',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const Text(
+                '김수뭉님',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Spacer(),
+        ],
       ),
     );
   }
 
+
   Widget _buildNoticeSection() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        // 더보기 탭으로 이동
-        MainPage.currentState?.updateIndex(4);
-        // 공지사항 페이지로 바로 이동
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const NoticePage()),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: mainColor,
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: mainColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Material(
-          color: Colors.transparent,
+          onTap: () {
+            // 더보기 탭(인덱스: 4)으로 이동
+            MainPage.currentState?.updateIndex(4);
+            // 공지사항 페이지로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NoticePage()),
+            );
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -319,61 +205,55 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                FutureBuilder<List<notice_logic.NoticeListItem>>(
-                  future: notice_logic.fetchRecentNotices(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.hasError) {
-                      return Center(child: Text('공지사항이 없습니다'));
-                    }
-                    final notices = snapshot.data!;
-                    return Column(
-                      children: [
-                        ...notices.map(
-                          (notice_logic.NoticeListItem notice) => Column(
+                ...notices.map(
+                  (notice) => Column(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          // 공지사항 상세 페이지로 이동
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NoticeDetailPage(
+                                notices: notices
+                                    .map((notice) => notice['title']!)
+                                    .toList(),
+                                index: notices.indexOf(notice),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
                             children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child:
-                                          notice_logic.NoticeTitleInteractive(
-                                              title: notice.title,
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        NoticeDetailPage(
-                                                      noticeId: notice.noticeId,
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Text(
-                                      notice_logic.formatDate(notice.createdAt),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
+                              Expanded(
+                                child: Text(
+                                  notice['title']!,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (notice != notices.last)
-                                Divider(color: Colors.grey[300], height: 1),
+                              const SizedBox(width: 16),
+                              Text(
+                                notice['date']!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                      if (notice != notices.last)
+                        Divider(color: Colors.grey[300], height: 1),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -527,157 +407,101 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 12),
         SizedBox(
           height: 160,
-          child: Scrollbar(
-            controller: _videoScrollController,
-            thumbVisibility: true,
-            interactive: true,
-            child: ListView.builder(
-              controller: _videoScrollController,
-              scrollDirection: Axis.horizontal,
-              itemCount: recommendedVideos.length,
-              itemBuilder: (context, index) {
-                final video = recommendedVideos[index];
-                return GestureDetector(
-                  onTap: () async {
-                    final Uri url = Uri.parse(video.videoUrl);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  child: Container(
-                    width: 240,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: mainColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(12)),
-                              child: Image.network(
-                                video.thumbnailUrl,
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 100,
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.video_library,
-                                        size: 40),
-                                  );
-                                },
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: recommendedVideos.length,
+            itemBuilder: (context, index) {
+              final video = recommendedVideos[index];
+              return GestureDetector(
+                onTap: () async {
+                  final Uri url = Uri.parse(video.videoUrl);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  width: 240,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: mainColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12)),
+                            child: Image.network(
+                              video.thumbnailUrl,
+                              height: 100,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child:
+                                      const Icon(Icons.video_library, size: 40),
+                                );
+                              },
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.3),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(12)),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.play_circle_outline,
+                                  color: Colors.white,
+                                  size: 36,
+                                ),
                               ),
                             ),
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withAlpha(75),
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12)),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.play_circle_outline,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
-                                ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              video.description,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                video.title,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                video.description,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],
-    );
-  }
-}
-
-class _NoticeTitleInteractive extends StatefulWidget {
-  final String title;
-  final VoidCallback onTap;
-  const _NoticeTitleInteractive(
-      {required this.title, required this.onTap, Key? key})
-      : super(key: key);
-
-  @override
-  State<_NoticeTitleInteractive> createState() =>
-      _NoticeTitleInteractiveState();
-}
-
-class _NoticeTitleInteractiveState extends State<_NoticeTitleInteractive> {
-  bool _pressed = false;
-
-  void _setPressed(bool pressed) {
-    if (_pressed != pressed) {
-      setState(() {
-        _pressed = pressed;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = _pressed ? Colors.green.shade400 : Colors.transparent;
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _setPressed(false),
-      onTapCancel: () => _setPressed(false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: color,
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: Text(
-          widget.title,
-          style: const TextStyle(
-            fontSize: 15,
-            color: Colors.black87,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
     );
   }
 }

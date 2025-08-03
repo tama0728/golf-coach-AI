@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'notice.dart';
+import 'notice/notice.dart';
 import 'customer_center.dart';
 import 'policy.dart';
 import 'account.dart';
