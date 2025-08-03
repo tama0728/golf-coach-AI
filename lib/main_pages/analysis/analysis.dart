@@ -478,6 +478,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
             }),
           );
 
+          if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
           if (response.statusCode == 201) {
             print('Analysis info uploaded successfully');
             // 결과 페이지로 이동
@@ -490,19 +492,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ),
             );
           } else {
+            if (mounted) Navigator.of(context, rootNavigator: true).pop();
             print('Failed to upload analysis info: ${response.statusCode}, ${response.body}');
           }
         } catch (e) {
+          if (mounted) Navigator.of(context, rootNavigator: true).pop();
           print('Error uploading analysis info: $e');
         }
 
       } else {
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
           // _isLoaded = false;
         });
       }
     } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
       setState(() {
         _errorMessage = '오류 발생: $e';
         // _isLoaded = false;
