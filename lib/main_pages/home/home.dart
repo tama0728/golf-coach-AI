@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../main_page.dart';
-import '../more/notice.dart';
-import '../more/notice_detail_page.dart';
+import '../more/notice/notice.dart';
+import '../more/notice/notice_detail_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
