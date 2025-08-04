@@ -120,8 +120,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         await newFile.writeAsBytes(videoBytes);
       }
       // 안드로이드인 경우 영상 회전
-      else if (Platform.isAndroid) {
-        // 회전정보 삭제
+      else if (Platform.isAndroid || Platform.isIOS) {
+        // 안드로이드나 iOS에서는 FFmpeg을 사용하여 비디오 회전
         await _rotateVideo(video.path, newPath);
       } else {
         // iOS나 다른 플랫폼에서는 단순히 복사
@@ -200,7 +200,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
     if (!_isCameraInitialized) {
       return Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+              Text('카메라 로딩중입니다', style: TextStyle(fontSize: 16)),
+            ],
+          ),
         ),
       );
     }
@@ -321,7 +328,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   left: 0,
                   right: 0,
                   top: 0,
-                  child: LinearProgressIndicator(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+                      Text('저장 중입니다', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -427,10 +441,19 @@ class _AnalysisPageState extends State<AnalysisPage> {
       barrierDismissible: false, // 사용자가 화면을 닫지 못하도록 설정
       builder: (BuildContext context) {
         return Center(
-          child: CircularProgressIndicator(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+              Text('업로드 중입니다', style: TextStyle(fontSize: 16)),
+            ],
+          ),
         );
       },
     );
+
+
 
     try {
       print('Fetching result data for video: $_videoPath');
@@ -505,6 +528,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
         setState(() {
           _errorMessage = '결과 데이터를 받아오지 못했습니다.';
           // _isLoaded = false;
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('업로드 실패'),
+                content: Text('신체가 카메라에 잘 나오도록 촬영해주세요.\n'),
+                actions: [
+                  TextButton(
+                    child: Text('확인'),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // 팝업 닫기
+                    },
+                  ),
+                ],
+              ),
+            );
+          }
         });
       }
     } catch (e) {
@@ -530,7 +570,9 @@ class _AnalysisPageState extends State<AnalysisPage> {
             children: [
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              )
+              ),
+              SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+              Text('처리 중입니다', style: TextStyle(fontSize: 16)),
             ],
           ),
         );
@@ -538,10 +580,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
 
     try {
-      // FFmpeg을 사용하여 비디오 회전
-      await FFmpegKit.execute(
-          '-i $inputPath -vf "sidedata=delete" -c:v libx264 -preset ultrafast $outputPath'
-      );
+      if (kIsWeb) {
+      } else if (Platform.isIOS) {
+        // FFmpeg을 사용하여 비디오 회전
+        await FFmpegKit.execute(
+            '-i $inputPath -vf "hflip" -c:v libx264 -preset ultrafast $outputPath'
+        );
+      } else if (Platform.isAndroid) {
+        // FFmpeg을 사용하여 비디오 회전
+        await FFmpegKit.execute(
+            '-i $inputPath -vf "sidedata=delete" -c:v libx264 -preset ultrafast $outputPath'
+        );
+      }
       Navigator.of(context, rootNavigator: true).pop();
 
     } catch (e) {
