@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../more/notice/notice.dart';
+import '../more/notice/notice_detail_page.dart';
 
 class NoticeListItem {
   final int noticeId;
@@ -87,4 +89,105 @@ class _NoticeTitleInteractiveState extends State<NoticeTitleInteractive> {
       ),
     );
   }
+}
+
+// 공지사항 섹션 위젯
+Widget buildNoticeSection(BuildContext context) {
+  return Container(
+    margin: const EdgeInsets.only(top: 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '공지사항',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NoticePage(),
+                  ),
+                );
+              },
+              child: const Text(
+                '더보기',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder<List<NoticeListItem>>(
+          future: fetchRecentNotices(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return const Center(
+                child: Text('공지사항을 불러올 수 없습니다.'),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(
+                child: Text('공지사항이 없습니다.'),
+              );
+            } else {
+              return Column(
+                children: snapshot.data!
+                    .map((notice) => Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: NoticeTitleInteractive(
+                                      title: notice.title,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                NoticeDetailPage(
+                                              noticeId: notice.noticeId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    formatDate(notice.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (notice != snapshot.data!.last)
+                              Divider(color: Colors.grey.shade300),
+                          ],
+                        ))
+                    .toList(),
+              );
+            }
+          },
+        ),
+      ],
+    ),
+  );
 }

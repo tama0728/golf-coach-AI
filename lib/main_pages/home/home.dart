@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../main_page.dart';
-import '../more/notice/notice.dart';
-import '../more/notice/notice_detail_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:io';
-import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'notice_logic.dart' as notice_logic;
+import 'home_notice.dart' as notice_logic;
+import 'home_video.dart';
 import 'package:provider/provider.dart';
 import '../../providers/profile_image_provider.dart';
 
@@ -19,21 +16,6 @@ class HomePage extends StatefulWidget {
 
   @override
   State<HomePage> createState() => _HomePageState();
-}
-
-// VideoModel 클래스 추가
-class VideoModel {
-  final String title;
-  final String thumbnailUrl;
-  final String videoUrl;
-  final String description;
-
-  VideoModel({
-    required this.title,
-    required this.thumbnailUrl,
-    required this.videoUrl,
-    required this.description,
-  });
 }
 
 class _HomePageState extends State<HomePage> {
@@ -46,16 +28,8 @@ class _HomePageState extends State<HomePage> {
   // 최고 기록 데이터
   final Map<String, dynamic> bestRecord = {'date': '', 'score': 0};
 
-  // 추천 영상 URL만 저장
-  final List<String> recommendedVideoUrls = [
-    'https://youtu.be/WICoTVgv1CM?si=nTYtdD91R5hfk5rr',
-    'https://youtu.be/oQeS4TPiC7Q?si=vD-dzLi1PoBAgmV9',
-    'https://youtu.be/bSXL5O773O4?si=xfSaxEZ9L8IAK_dI',
-  ];
-
-  // 실제 표시할 추천 영상 정보
+  // 영상 관련 상태
   List<VideoModel> recommendedVideos = [];
-
   final ScrollController _videoScrollController = ScrollController();
 
   final storage = FlutterSecureStorage();
@@ -76,36 +50,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchRecommendedVideos() async {
-    List<VideoModel> videos = [];
-    for (final url in recommendedVideoUrls) {
-      try {
-        final oembedUrl = 'https://www.youtube.com/oembed?url=$url&format=json';
-        final response = await http.get(Uri.parse(oembedUrl));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          videos.add(VideoModel(
-            title: data['title'] ?? '',
-            thumbnailUrl: data['thumbnail_url'] ?? '',
-            videoUrl: url,
-            description: data['author_name'] ?? '',
-          ));
-        } else {
-          videos.add(VideoModel(
-            title: '제목을 불러올 수 없음',
-            thumbnailUrl: '',
-            videoUrl: url,
-            description: '',
-          ));
-        }
-      } catch (e) {
-        videos.add(VideoModel(
-          title: '제목을 불러올 수 없음',
-          thumbnailUrl: '',
-          videoUrl: url,
-          description: '',
-        ));
-      }
-    }
+    final videos = await fetchRecommendedVideos(recommendedVideoUrls);
     setState(() {
       recommendedVideos = videos;
     });
@@ -150,9 +95,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String formatDate(String? isoString) {
-    if (isoString == null || isoString.isEmpty) return '';
-    final dateTime = DateTime.parse(isoString);
-    return DateFormat('yyyy.MM.dd HH:mm').format(dateTime);
+    return notice_logic.formatDate(isoString);
   }
 
   // 기록 시작하기 버튼 클릭 핸들러
@@ -179,9 +122,10 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 24),
                 _buildBestRecordSection(),
                 const SizedBox(height: 24),
-                _buildNoticeSection(),
+                notice_logic.buildNoticeSection(context),
                 const SizedBox(height: 24),
-                _buildRecommendedVideosSection(),
+                buildRecommendedVideosSection(
+                    recommendedVideos, _videoScrollController),
               ],
             ),
           ),
@@ -247,137 +191,6 @@ class _HomePageState extends State<HomePage> {
             ),
             const Spacer(),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoticeSection() {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
-        // 더보기 탭으로 이동
-        MainPage.currentState?.updateIndex(4);
-        // 공지사항 페이지로 바로 이동
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const NoticePage()),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: mainColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.campaign_outlined,
-                        color: Colors.black87,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text(
-                      '공지사항',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: const [
-                        Text(
-                          '더보기',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.black54,
-                          size: 12,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                FutureBuilder<List<notice_logic.NoticeListItem>>(
-                  future: notice_logic.fetchRecentNotices(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.hasError) {
-                      return Center(child: Text('공지사항이 없습니다'));
-                    }
-                    final notices = snapshot.data!;
-                    return Column(
-                      children: [
-                        ...notices.map(
-                          (notice_logic.NoticeListItem notice) => Column(
-                            children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child:
-                                          notice_logic.NoticeTitleInteractive(
-                                              title: notice.title,
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        NoticeDetailPage(
-                                                      noticeId: notice.noticeId,
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Text(
-                                      notice_logic.formatDate(notice.createdAt),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (notice != notices.last)
-                                Divider(color: Colors.grey[300], height: 1),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -513,171 +326,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildRecommendedVideosSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '추천 영상',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 160,
-          child: Scrollbar(
-            controller: _videoScrollController,
-            thumbVisibility: true,
-            interactive: true,
-            child: ListView.builder(
-              controller: _videoScrollController,
-              scrollDirection: Axis.horizontal,
-              itemCount: recommendedVideos.length,
-              itemBuilder: (context, index) {
-                final video = recommendedVideos[index];
-                return GestureDetector(
-                  onTap: () async {
-                    final Uri url = Uri.parse(video.videoUrl);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  child: Container(
-                    width: 240,
-                    margin: const EdgeInsets.only(right: 12),
-                    decoration: BoxDecoration(
-                      color: mainColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(12)),
-                              child: Image.network(
-                                video.thumbnailUrl,
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 100,
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.video_library,
-                                        size: 40),
-                                  );
-                                },
-                              ),
-                            ),
-                            Positioned.fill(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withAlpha(75),
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12)),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.play_circle_outline,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                video.title,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                video.description,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NoticeTitleInteractive extends StatefulWidget {
-  final String title;
-  final VoidCallback onTap;
-  const _NoticeTitleInteractive(
-      {required this.title, required this.onTap, Key? key})
-      : super(key: key);
-
-  @override
-  State<_NoticeTitleInteractive> createState() =>
-      _NoticeTitleInteractiveState();
-}
-
-class _NoticeTitleInteractiveState extends State<_NoticeTitleInteractive> {
-  bool _pressed = false;
-
-  void _setPressed(bool pressed) {
-    if (_pressed != pressed) {
-      setState(() {
-        _pressed = pressed;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = _pressed ? Colors.green.shade400 : Colors.transparent;
-    return GestureDetector(
-      onTap: widget.onTap,
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _setPressed(false),
-      onTapCancel: () => _setPressed(false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: color,
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: Text(
-          widget.title,
-          style: const TextStyle(
-            fontSize: 15,
-            color: Colors.black87,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
     );
   }
 }
