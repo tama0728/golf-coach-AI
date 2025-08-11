@@ -5,6 +5,8 @@ import 'signup_page1.dart';
 import 'findID.dart';
 import 'findPW.dart';
 import 'bloc.dart';
+import 'package:provider/provider.dart';
+import '../providers/profile_image_provider.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -52,10 +54,7 @@ class _LoginPageState extends State<LoginPage> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_email': id,
-          'user_pw': pw
-        }),
+        body: jsonEncode({'user_email': id, 'user_pw': pw}),
       );
 
       print(response.statusCode);
@@ -80,11 +79,20 @@ class _LoginPageState extends State<LoginPage> {
         final autoLoginValue = await storage.read(key: 'auto_login');
         print('저장된 JWT 토큰: $check, 자동로그인: $autoLoginValue');
 
+        // 프로필 이미지 가져오기
+        try {
+          final provider =
+              Provider.of<ProfileImageProvider>(context, listen: false);
+          await provider.fetchProfileImage();
+        } catch (e) {
+          print('로그인 후 프로필 이미지 가져오기 오류: $e');
+        }
+
         // 홈 화면 등으로 이동
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainPage()),
         );
-        return ;
+        return;
       } else {
         setState(() {
           _errorMessage = '로그인 실패: ${jsonDecode(response.body)['error']}';
@@ -134,7 +142,8 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: Center(
-            child: SingleChildScrollView( // 키보드 때문에 overflow 방지
+            child: SingleChildScrollView(
+              // 키보드 때문에 overflow 방지
               child: SizedBox(
                 height: null, // 높이 제한 해제
                 child: Container(
@@ -170,7 +179,8 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Text(
                           'LOGIN',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 20),
                         StreamBuilder<String>(
@@ -183,7 +193,9 @@ class _LoginPageState extends State<LoginPage> {
                               border: OutlineInputBorder(),
                               hintText: "Enter user email",
                               labelText: "User email",
-                              errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                              errorText: snapshot.hasError
+                                  ? snapshot.error.toString()
+                                  : null,
                             ),
                           ),
                         ),
@@ -199,7 +211,9 @@ class _LoginPageState extends State<LoginPage> {
                               border: OutlineInputBorder(),
                               hintText: "Enter password",
                               labelText: "Password",
-                              errorText: snapshot.hasError ? snapshot.error.toString() : null,
+                              errorText: snapshot.hasError
+                                  ? snapshot.error.toString()
+                                  : null,
                             ),
                           ),
                         ),
@@ -232,7 +246,8 @@ class _LoginPageState extends State<LoginPage> {
                           child: ElevatedButton(
                             onPressed: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => SignupPage1()),
+                                MaterialPageRoute(
+                                    builder: (context) => SignupPage1()),
                               );
                             },
                             child: Text('회원가입'),
@@ -245,7 +260,8 @@ class _LoginPageState extends State<LoginPage> {
                             TextButton(
                               onPressed: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => FindIDPage()),
+                                  MaterialPageRoute(
+                                      builder: (context) => FindIDPage()),
                                 );
                               },
                               child: Text('아이디 찾기'),
@@ -253,7 +269,8 @@ class _LoginPageState extends State<LoginPage> {
                             TextButton(
                               onPressed: () {
                                 Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (context) => FindPWPage()),
+                                  MaterialPageRoute(
+                                      builder: (context) => FindPWPage()),
                                 );
                               },
                               child: Text('비밀번호 찾기'),

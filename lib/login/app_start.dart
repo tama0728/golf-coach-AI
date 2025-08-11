@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import '../main_pages/main_page.dart';
 import '../login/login_page.dart';
+import '../providers/profile_image_provider.dart';
 
 final storage = FlutterSecureStorage();
 
@@ -28,14 +30,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (token != null && autoLogin == 'true') {
       try {
-        final url = Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/auth/check-token');
-        final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
-        debugPrint('[SplashScreen] check-token: ${response.statusCode}, ${response.body}');
+        final url = Uri.parse(
+            'http://${dotenv.get('HOSTIP')}:3000/api/auth/check-token');
+        final response =
+            await http.get(url, headers: {'Authorization': 'Bearer $token'});
+        debugPrint(
+            '[SplashScreen] check-token: ${response.statusCode}, ${response.body}');
         final email = jsonDecode(response.body)['user']['user_email'];
         debugPrint('[SplashScreen] 이메일: $email');
         await storage.write(key: 'email', value: email);
         if (response.statusCode == 200) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainPage()));
+          // 프로필 이미지 가져오기
+          try {
+            final provider =
+                Provider.of<ProfileImageProvider>(context, listen: false);
+            await provider.fetchProfileImage();
+          } catch (e) {
+            debugPrint('[SplashScreen] 프로필 이미지 가져오기 오류: $e');
+          }
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => MainPage()));
           return;
         }
       } catch (e) {
@@ -43,7 +57,8 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
     // 토큰 없거나 실패 → 로그인 페이지로 이동
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LoginPage()));
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (_) => LoginPage()));
   }
 
   @override

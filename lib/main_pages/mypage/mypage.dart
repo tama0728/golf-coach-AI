@@ -10,9 +10,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../analysis/result_ui.dart';
 
 class MyPage extends StatefulWidget {
-@override
-_MyPageState createState() => _MyPageState();
+  @override
+  _MyPageState createState() => _MyPageState();
 }
+
 class _MyPageState extends State<MyPage> {
   List<Map<String, String>> records = [];
 
@@ -47,10 +48,10 @@ class _MyPageState extends State<MyPage> {
     try {
       final token = await storage.read(key: 'jwt_token');
       final response = await http.get(
-          Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
-          headers: {
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
+        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -76,7 +77,8 @@ class _MyPageState extends State<MyPage> {
     }
     try {
       final response = await http.get(
-        Uri.parse('http://${dotenv.get('HOSTIP')}:3000/api/analysis/results?user_email=$_userEmail'),
+        Uri.parse(
+            'http://${dotenv.get('HOSTIP')}:3000/api/analysis/results?user_email=$_userEmail'),
       );
 
       print('Response status: ${response.statusCode}');
@@ -86,27 +88,28 @@ class _MyPageState extends State<MyPage> {
           for (var record in data) {
             // 각 레코드의 datetime을 'yyyy/MM/dd HH:mm:ss' 형식으로 변환
             record as Map<String, dynamic>;
-            String formattedDate = record['analysis_date'].replaceAll('T', ' ').substring(0, 19);
+            String formattedDate =
+                record['analysis_date'].replaceAll('T', ' ').substring(0, 19);
             records.add({
               'fileId': record['analysis_id'],
               'datetime': formattedDate,
               'score': '${record['analysis_score']}점',
             });
           }
-        }
-        );
+        });
       } else {
-        throw Exception('Failed to load records ${jsonDecode(response.body)['message']}');
+        throw Exception(
+            'Failed to load records ${jsonDecode(response.body)['message']}');
       }
     } catch (e) {
       print('Error fetching records: $e');
       setState(() {
-        records.add({ 'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': '' });
+        records.add(
+            {'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': ''});
         _isRecordsLoaded = false;
       });
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +127,8 @@ class _MyPageState extends State<MyPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           BodyInfoHeader(username: _userNickname, swingDir: _swingDir),
-          UserInfoHeader(username: _userNickname, swingDir: _swingDir, records: records),
+          UserInfoHeader(
+              username: _userNickname, swingDir: _swingDir, records: records),
           // Divider는 Padding 밖에 둬서 끝까지 퍼지게
           Divider(
             color: Color(0xFFE6F5E6),
@@ -183,13 +187,26 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
 
   Widget _buildProfileOption(String path) {
     return GestureDetector(
-      onTap: () {
-        // 프로필 이미지 변경 상태 저장
-        Provider.of<ProfileImageProvider>(context, listen: false).setImagePath(path);
-        setState(() {
-          selectedImage = path;
-        });
-        Navigator.pop(context);
+      onTap: () async {
+        // 서버에 프로필 이미지 업데이트
+        final provider =
+            Provider.of<ProfileImageProvider>(context, listen: false);
+        final success = await provider.updateProfileImage(path);
+
+        if (success) {
+          setState(() {
+            selectedImage = path;
+          });
+          Navigator.pop(context);
+        } else {
+          // 업데이트 실패 시 스낵바 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('프로필 이미지 업데이트에 실패했습니다.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
       child: CircleAvatar(
         radius: 30,
@@ -270,13 +287,13 @@ class UserInfoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     // 최고 점수 및 날짜 계산
     double maxScore = -1;
     String maxScoreDate = '';
     double totalScore = 0;
     for (var record in records) {
-      if (!record.containsKey('score') || !record.containsKey('datetime')) continue;
+      if (!record.containsKey('score') || !record.containsKey('datetime'))
+        continue;
       double score = double.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
       totalScore += score;
       if (score > maxScore) {
@@ -352,9 +369,8 @@ class UserInfoHeader extends StatelessWidget {
                   _buildValue(swingDir),
                   _verticalDivider(),
                   Tooltip(
-                    message: maxScoreDate.isNotEmpty
-                        ? '달성일: $maxScoreDate'
-                        : '',
+                    message:
+                        maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
                     child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
                   ),
                   _verticalDivider(),
@@ -370,6 +386,7 @@ class UserInfoHeader extends StatelessWidget {
       ),
     );
   }
+
   // 라벨 빌더
   Widget _buildLabel(String label) {
     return SizedBox(
@@ -502,7 +519,8 @@ class AnalysisRecordTile extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => ResultUIPage(
-              fileId!, double.parse(score.replaceAll('점', '')),
+              fileId!,
+              double.parse(score.replaceAll('점', '')),
             ),
           ),
         );
@@ -552,11 +570,11 @@ class _ProfileImageSelectorState extends State<ProfileImageSelector> {
                 // 선택된 항목 표시 테두리
                 child: selectedImage == path
                     ? Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.green, width: 3),
-                  ),
-                )
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.green, width: 3),
+                        ),
+                      )
                     : null,
               ),
             );

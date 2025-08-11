@@ -41,6 +41,7 @@ class _HomePageState extends State<HomePage> {
     tz.initializeTimeZones();
     _fetchUserNickname();
     _fetchRecommendedVideos();
+    _fetchProfileImage();
   }
 
   @override
@@ -54,6 +55,11 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       recommendedVideos = videos;
     });
+  }
+
+  Future<void> _fetchProfileImage() async {
+    final provider = Provider.of<ProfileImageProvider>(context, listen: false);
+    await provider.fetchProfileImage();
   }
 
   Future<void> _fetchUserNickname() async {
