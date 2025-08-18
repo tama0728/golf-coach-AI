@@ -95,6 +95,12 @@ class _NoticeTitleInteractiveState extends State<NoticeTitleInteractive> {
 Widget buildNoticeSection(BuildContext context) {
   return Container(
     margin: const EdgeInsets.only(top: 20),
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Color(0xFFE6F5E6),
+      borderRadius: BorderRadius.circular(12),
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -121,7 +127,7 @@ Widget buildNoticeSection(BuildContext context) {
               child: const Text(
                 '더보기',
                 style: TextStyle(
-                  color: Colors.green,
+                  color: Colors.grey,
                   fontSize: 14,
                 ),
               ),

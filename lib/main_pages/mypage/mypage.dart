@@ -230,15 +230,15 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
                 '개인정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-                  );
-                },
-              ),
+              // IconButton(
+              //   icon: Icon(Icons.settings),
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+              //     );
+              //   },
+              // ),
             ],
           ),
           const SizedBox(height: 16),
@@ -275,14 +275,14 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
 // 1. 유저정보 헤더 영역
 class UserInfoHeader extends StatelessWidget {
   final String username;
-  final String swingDir;
+  String swingDir;
   final List<Map<String, String>> records;
 
   UserInfoHeader({
     required this.username,
     required this.swingDir,
     required this.records,
-    super.key,
+    // super.key,
   });
 
   @override
@@ -366,7 +366,79 @@ class UserInfoHeader extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildValue(swingDir),
+                  GestureDetector(
+                    onTap: () async {
+                      final selected = await showModalBottomSheet<String>(
+                        context: context,
+                        builder: (_) => SizedBox(
+                          height: 150,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // 오른손 버튼
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context, '오른손');
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    // Icon(Icons.pan_tool_alt, size: 36),
+                                    // SizedBox(height: 8),
+                                    Text(
+                                      '오른손',
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // 왼손 버튼
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context, '왼손');
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    // Icon(Icons.pan_tool, size: 36),
+                                    // SizedBox(height: 8),
+                                    Text(
+                                      '왼손',
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+
+                      // 선택 결과를 활용하려면 여기에 추가
+                      if (selected != null) {
+                        // 예시: setState(() => _selectedHand = selected);
+                        swingDir = selected;
+                        print('선택된 손: $swingDir');
+                          // 스윙 방향 업데이트
+                        try {
+                          final response = await http.get(
+                            Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
+                            headers: {
+                              'Authorization': 'Bearer',
+                            },
+                          );
+                          if (response.statusCode == 200) {
+                            final data = json.decode(response.body);
+                          } else if (response.statusCode == 401) {
+                          } else if (response.statusCode == 404) {
+                          } else {
+                          }
+                        } catch (e) {
+                        }
+                      }
+                    },
+                    child: _buildValue(swingDir),
+                  ),
                   _verticalDivider(),
                   Tooltip(
                     message:

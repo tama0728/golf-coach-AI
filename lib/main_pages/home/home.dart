@@ -121,15 +121,15 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 _buildProfileSection(context),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 _buildAnalysisButton(),
-                const SizedBox(height: 24),
-                _buildBestRecordSection(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                // _buildBestRecordSection(),
+                // const SizedBox(height: 24),
                 notice_logic.buildNoticeSection(context),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 buildRecommendedVideosSection(
                     recommendedVideos, _videoScrollController),
               ],
