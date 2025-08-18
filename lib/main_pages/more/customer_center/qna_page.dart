@@ -21,19 +21,19 @@ class _QnAPageState extends State<QnAPage>
     '비밀번호를 잊어버렸어요. 어떻게 재설정하나요?',
     '자동 로그인을 설정하려면 어떻게 해야 하나요?',
     '회원 탈퇴는 어떻게 진행하나요?',
-    '문의사항이 있으면 어디에 연락해야 하나요?'
+    '버그내용이 있으면 어디에 연락해야 하나요?'
   ];
   final List<String> _answers = [
     '앱 실행 후 로그인 화면에서 "회원가입" 버튼을 탭하고 이메일, 비밀번호, 프로필 정보를 입력한 뒤 "가입하기"를 눌러주세요.',
     '로그인 화면에서 "비밀번호 찾기"를 선택하고 가입하신 이메일 주소를 입력하시면 재설정 링크가 이메일로 발송됩니다.',
     '로그인 시 표시되는 "자동 로그인" 체크박스를 활성화하면 다음 번 앱 실행부터 자동으로 로그인됩니다.',
     '더보기 > 계정관리 > 회원탈퇴 메뉴로 이동하여 안내에 따라 진행하시면 계정이 삭제됩니다.',
-    '앱 내 "더보기 > 문의하기" 탭을 이용하시거나 support@golfcoachapp.com으로 이메일 문의를 보내주세요.'
+    '앱 내 "더보기 > 버그신고" 탭을 이용하시거나 support@golfcoachapp.com으로 이메일 문의를 보내주세요.'
   ];
 
-  // 2) 내 문의내역 탭 데이터
-  final List<String> _ongoing = ['내 질문1', '내 질문2'];
-  final List<String> _completed = ['완료된 질문1', '완료된 질문2'];
+  // // 2) 내 문의내역 탭 데이터
+  // final List<String> _ongoing = ['내 질문1', '내 질문2'];
+  // final List<String> _completed = ['완료된 질문1', '완료된 질문2'];
 
   // 3) 문의하기 탭 데이터
   final TextEditingController _inquiryController = TextEditingController();
@@ -70,8 +70,6 @@ class _QnAPageState extends State<QnAPage>
           indicatorColor: Colors.black87,
           tabs: const [
             Tab(text: 'FAQ'),
-            Tab(text: '내 문의내역'),
-            Tab(text: '문의하기'),
           ],
         ),
       ),
@@ -176,68 +174,68 @@ class _QnAPageState extends State<QnAPage>
           ),
 
           // ── 2) 내 문의내역 탭 ─────────────────────────────
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '진행중인 문의',
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._ongoing.map(
-                        (q) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: lightGreen,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(q,
-                          style: const TextStyle(color: Colors.black87)),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    '완료된 문의',
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._completed.map(
-                        (q) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: lightGreen,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ExpansionTile(
-                        title:
-                        Text(q, style: const TextStyle(color: Colors.black87)),
-                        childrenPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        children: const [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              '여기에 답변 내용을 표시합니다.',
-                              style: TextStyle(color: Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // SingleChildScrollView(
+          //   child: Padding(
+          //     padding: const EdgeInsets.all(16),
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         const Text(
+          //           '진행중인 문의',
+          //           style:
+          //           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          //         ),
+          //         const SizedBox(height: 8),
+          //         ..._ongoing.map(
+          //               (q) => Container(
+          //             margin: const EdgeInsets.only(bottom: 8),
+          //             padding: const EdgeInsets.symmetric(
+          //                 vertical: 12, horizontal: 16),
+          //             decoration: BoxDecoration(
+          //               color: lightGreen,
+          //               borderRadius: BorderRadius.circular(20),
+          //             ),
+          //             child: Text(q,
+          //                 style: const TextStyle(color: Colors.black87)),
+          //           ),
+          //         ),
+          //         const SizedBox(height: 24),
+          //         const Text(
+          //           '완료된 문의',
+          //           style:
+          //           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          //         ),
+          //         const SizedBox(height: 8),
+          //         ..._completed.map(
+          //               (q) => Container(
+          //             margin: const EdgeInsets.only(bottom: 8),
+          //             decoration: BoxDecoration(
+          //               color: lightGreen,
+          //               borderRadius: BorderRadius.circular(20),
+          //             ),
+          //             child: ExpansionTile(
+          //               title:
+          //               Text(q, style: const TextStyle(color: Colors.black87)),
+          //               childrenPadding: const EdgeInsets.symmetric(
+          //                   horizontal: 16, vertical: 8),
+          //               children: const [
+          //                 Align(
+          //                   alignment: Alignment.centerLeft,
+          //                   child: Text(
+          //                     '여기에 답변 내용을 표시합니다.',
+          //                     style: TextStyle(color: Colors.black87),
+          //                   ),
+          //                 ),
+          //               ],
+          //             ),
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
 
-          // ── 3) 문의하기 탭 ─────────────────────────────
+          // ── 3) 버그신고 탭 ─────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -246,7 +244,7 @@ class _QnAPageState extends State<QnAPage>
                   controller: _inquiryController,
                   maxLines: 6,
                   decoration: InputDecoration(
-                    hintText: '문의사항을 입력하세요',
+                    hintText: '버그내용을 입력하세요',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4)),
                   ),
