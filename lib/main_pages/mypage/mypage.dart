@@ -273,18 +273,273 @@ class _BodyInfoHeaderState extends State<BodyInfoHeader> {
   }
 }
 
+// // 1. 유저정보 헤더 영역
+// class UserInfoHeader extends StatelessWidget {
+//   final String username;
+//   String swingDir;
+//   final List<Map<String, String>> records;
+//
+//   UserInfoHeader({
+//     required this.username,
+//     required this.swingDir,
+//     required this.records,
+//     // super.key,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     // 최고 점수 및 날짜 계산
+//     double maxScore = -1;
+//     String maxScoreDate = '';
+//     double totalScore = 0;
+//     for (var record in records) {
+//       if (!record.containsKey('score') || !record.containsKey('datetime'))
+//         continue;
+//       double score = double.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
+//       totalScore += score;
+//       if (score > maxScore) {
+//         maxScore = score;
+//         maxScoreDate = record['datetime']!;
+//       }
+//     }
+//     double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
+//     // 위젯 빌드
+//     return Padding(
+//       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           // 제목 + 설정 버튼
+//           // Row(
+//           //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//           //   children: [
+//           //     Text(
+//           //       '개인정보',
+//           //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//           //     ),
+//           //     IconButton(
+//           //       // 오른쪽 위 아이콘 + -> 톱니바퀴
+//           //       icon: Icon(Icons.settings),
+//           //       onPressed: () {
+//           //         Navigator.push(
+//           //           context,
+//           //           MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
+//           //         );
+//           //       },
+//           //     ),
+//           //   ],
+//           // ),
+//           // SizedBox(height: 16),
+//           // Row(
+//           //   mainAxisAlignment: MainAxisAlignment.start,
+//           //   children: [
+//           //     Container(
+//           //       width: 48,
+//           //       height: 48,
+//           //       decoration: BoxDecoration(
+//           //         shape: BoxShape.circle,
+//           //         color: Colors.grey[200],
+//           //       ),
+//           //       child: const Icon(Icons.person, size: 30, color: Colors.grey),
+//           //     ),
+//           //     SizedBox(width: 12),
+//           //     Text(
+//           //       '$username 님',
+//           //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//           //     ),
+//           //   ],
+//           // ),
+//           // SizedBox(height: 16),
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.center,
+//             children: [
+//               Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceAround,
+//                 children: [
+//                   _buildLabel('스윙 방향'),
+//                   _verticalDivider(),
+//                   _buildLabel('최고 점수'),
+//                   _verticalDivider(),
+//                   _buildLabel('평균 점수'),
+//                 ],
+//               ),
+//               SizedBox(height: 8),
+//               Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceAround,
+//                 children: [
+//                   GestureDetector(
+//                     onTap: () async {
+//                       final selected = await showModalBottomSheet<String>(
+//                         context: context,
+//                         builder: (_) => SizedBox(
+//                           height: 150,
+//                           child: Row(
+//                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+//                             children: [
+//                               // 오른손 버튼
+//                               GestureDetector(
+//                                 onTap: () {
+//                                   Navigator.pop(context, '오른손');
+//                                 },
+//                                 child: Column(
+//                                   mainAxisAlignment: MainAxisAlignment.center,
+//                                   children: const [
+//                                     // Icon(Icons.pan_tool_alt, size: 36),
+//                                     // SizedBox(height: 8),
+//                                     Text(
+//                                       '오른손',
+//                                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+//                                     ),
+//                                   ],
+//                                 ),
+//                               ),
+//                               // 왼손 버튼
+//                               GestureDetector(
+//                                 onTap: () {
+//                                   Navigator.pop(context, '왼손');
+//                                 },
+//                                 child: Column(
+//                                   mainAxisAlignment: MainAxisAlignment.center,
+//                                   children: const [
+//                                     // Icon(Icons.pan_tool, size: 36),
+//                                     // SizedBox(height: 8),
+//                                     Text(
+//                                       '왼손',
+//                                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+//                                     ),
+//                                   ],
+//                                 ),
+//                               ),
+//                             ],
+//                           ),
+//                         ),
+//                       );
+//
+//                       // 선택 결과를 활용하려면 여기에 추가
+//                       if (selected != null) {
+//                         // 예시: setState(() => _selectedHand = selected);
+//                         swingDir = selected;
+//                         print('선택된 손: $swingDir');
+//                         final hand = swingDir == '오른손' ? 0 : 1;
+//                         print('스윙 방향: $hand');
+//                           // 스윙 방향 업데이트
+//                         try {
+//                           final token = await storage.read(key: 'jwt_token');
+//                           final response = await http.put(
+//                             Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me/batting-side'),
+//                             headers: {
+//                               'Authorization': 'Bearer $token',
+//                               'Content-Type': 'application/json',
+//                             },
+//                             body: json.encode({
+//                               "batting_side": hand,
+//                             }),
+//                           );
+//                           print('스윙 방향 업데이트 응답: ${response.statusCode}');
+//                           print('응답 본문: ${response.body}');
+//                           if (response.statusCode == 200) {
+//                           } else if (response.statusCode == 401) {
+//                           } else if (response.statusCode == 404) {
+//                           } else {
+//                           }
+//                         } catch (e) {
+//                         }
+//                       }
+//                     },
+//                     child: _buildValue(swingDir),
+//                   ),
+//                   _verticalDivider(),
+//                   Tooltip(
+//                     message:
+//                         maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
+//                     child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
+//                   ),
+//                   _verticalDivider(),
+//                   _buildValue(records.isNotEmpty
+//                       ? '${avgScore.toStringAsFixed(2)}점'
+//                       : '-'),
+//                 ],
+//               ),
+//             ],
+//           ),
+//           SizedBox(height: 16),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   // 라벨 빌더
+//   Widget _buildLabel(String label) {
+//     return SizedBox(
+//       width: 90,
+//       child: Center(
+//         child: Text(
+//           label,
+//           style: TextStyle(
+//             fontSize: 18,
+//             fontWeight: FontWeight.w500,
+//             color: Colors.grey[800],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   // 값 빌더
+//   Widget _buildValue(String value) {
+//     return SizedBox(
+//       width: 90,
+//       child: Center(
+//         child: Text(
+//           value,
+//           textAlign: TextAlign.center,
+//           style: TextStyle(
+//             fontSize: 22,
+//             fontWeight: FontWeight.w600,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   // 세로 구분선
+//   Widget _verticalDivider() {
+//     return Container(
+//       height: 40,
+//       child: VerticalDivider(
+//         color: Colors.grey[300],
+//         thickness: 1.5,
+//         width: 30,
+//       ),
+//     );
+//   }
+// }
+
 // 1. 유저정보 헤더 영역
-class UserInfoHeader extends StatelessWidget {
+class UserInfoHeader extends StatefulWidget {
   final String username;
-  String swingDir;
+  final String swingDir;
   final List<Map<String, String>> records;
 
-  UserInfoHeader({
+  const UserInfoHeader({
     required this.username,
     required this.swingDir,
     required this.records,
-    // super.key,
-  });
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<UserInfoHeader> createState() => _UserInfoHeaderState();
+}
+
+class _UserInfoHeaderState extends State<UserInfoHeader> {
+  late String swingDir;
+
+  @override
+  void initState() {
+    super.initState();
+    swingDir = widget.swingDir;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,9 +547,8 @@ class UserInfoHeader extends StatelessWidget {
     double maxScore = -1;
     String maxScoreDate = '';
     double totalScore = 0;
-    for (var record in records) {
-      if (!record.containsKey('score') || !record.containsKey('datetime'))
-        continue;
+    for (var record in widget.records) {
+      if (!record.containsKey('score') || !record.containsKey('datetime')) continue;
       double score = double.tryParse(record['score']!.replaceAll('점', '')) ?? 0;
       totalScore += score;
       if (score > maxScore) {
@@ -302,54 +556,14 @@ class UserInfoHeader extends StatelessWidget {
         maxScoreDate = record['datetime']!;
       }
     }
-    double avgScore = records.isNotEmpty ? totalScore / records.length : 0;
+    double avgScore = widget.records.isNotEmpty ? totalScore / widget.records.length : 0;
+
     // 위젯 빌드
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 제목 + 설정 버튼
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     Text(
-          //       '개인정보',
-          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          //     ),
-          //     IconButton(
-          //       // 오른쪽 위 아이콘 + -> 톱니바퀴
-          //       icon: Icon(Icons.settings),
-          //       onPressed: () {
-          //         Navigator.push(
-          //           context,
-          //           MaterialPageRoute(builder: (context) => EditBodyInfoPage()),
-          //         );
-          //       },
-          //     ),
-          //   ],
-          // ),
-          // SizedBox(height: 16),
-          // Row(
-          //   mainAxisAlignment: MainAxisAlignment.start,
-          //   children: [
-          //     Container(
-          //       width: 48,
-          //       height: 48,
-          //       decoration: BoxDecoration(
-          //         shape: BoxShape.circle,
-          //         color: Colors.grey[200],
-          //       ),
-          //       child: const Icon(Icons.person, size: 30, color: Colors.grey),
-          //     ),
-          //     SizedBox(width: 12),
-          //     Text(
-          //       '$username 님',
-          //       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          //     ),
-          //   ],
-          // ),
-          // SizedBox(height: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -384,8 +598,6 @@ class UserInfoHeader extends StatelessWidget {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: const [
-                                    // Icon(Icons.pan_tool_alt, size: 36),
-                                    // SizedBox(height: 8),
                                     Text(
                                       '오른손',
                                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
@@ -401,8 +613,6 @@ class UserInfoHeader extends StatelessWidget {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: const [
-                                    // Icon(Icons.pan_tool, size: 36),
-                                    // SizedBox(height: 8),
                                     Text(
                                       '왼손',
                                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
@@ -415,33 +625,41 @@ class UserInfoHeader extends StatelessWidget {
                         ),
                       );
 
-                      // 선택 결과를 활용하려면 여기에 추가
                       if (selected != null) {
-                        // 예시: setState(() => _selectedHand = selected);
-                        swingDir = selected;
+                        setState(() => swingDir = selected);
                         print('선택된 손: $swingDir');
                         final hand = swingDir == '오른손' ? 0 : 1;
                         print('스윙 방향: $hand');
-                          // 스윙 방향 업데이트
+                        // 스윙 방향 업데이트
                         try {
                           final token = await storage.read(key: 'jwt_token');
                           final response = await http.put(
                             Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me/batting-side'),
                             headers: {
-                              if (token != null) 'Authorization': 'Bearer $token',
+                              'Authorization': 'Bearer $token',
+                              'Content-Type': 'application/json',
                             },
                             body: json.encode({
-                              'batting_side': hand,
+                              "batting_side": hand,
                             }),
                           );
                           print('스윙 방향 업데이트 응답: ${response.statusCode}');
                           print('응답 본문: ${response.body}');
                           if (response.statusCode == 200) {
+                            // 성공적으로 업데이트됨
+                            setState(() {
+
+                            });
                           } else if (response.statusCode == 401) {
+                            // 인증 실패 처리
                           } else if (response.statusCode == 404) {
+                            // 사용자 정보 없음 처리
                           } else {
+                            // 기타 오류 처리
                           }
+                          // 필요하다면 추가 처리
                         } catch (e) {
+                          // 네트워크 에러 처리
                         }
                       }
                     },
@@ -449,12 +667,11 @@ class UserInfoHeader extends StatelessWidget {
                   ),
                   _verticalDivider(),
                   Tooltip(
-                    message:
-                        maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
+                    message: maxScoreDate.isNotEmpty ? '달성일: $maxScoreDate' : '',
                     child: _buildValue(maxScore >= 0 ? '$maxScore점' : '-'),
                   ),
                   _verticalDivider(),
-                  _buildValue(records.isNotEmpty
+                  _buildValue(widget.records.isNotEmpty
                       ? '${avgScore.toStringAsFixed(2)}점'
                       : '-'),
                 ],
@@ -513,6 +730,7 @@ class UserInfoHeader extends StatelessWidget {
     );
   }
 }
+
 
 // 2. 분석결과 리스트 전체
 class AnalysisResultList extends StatelessWidget {
