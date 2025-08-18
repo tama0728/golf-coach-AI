@@ -20,6 +20,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 
+
+
 class AnalysisPage extends StatefulWidget {
   @override
   _AnalysisPageState createState() => _AnalysisPageState();
@@ -231,6 +233,44 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   ),
                 ),
               ),
+              // 우측 상단 X 버튼 (새로 촬영하기)
+              Positioned(
+                top: 40,
+                right: 20,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.close, color: Colors.black, size: 28),
+                    onPressed: () {
+                      // 상태 초기화
+                      setState(() {
+                        _isEditing = false;
+                        _isRecording = false;
+                        _recordingDuration = Duration.zero;
+                        _videoPath = null;
+                        _startTrim = 0.0;
+                        _endTrim = 0.0;
+                        _isTrimming = false;
+                      });
+                      // 트리머 리소스 해제
+                      _trimmer?.dispose();
+                      _trimmer = null;
+                      // 타이머 정리
+                      _timer?.cancel();
+                    },
+                  ),
+                ),
+              ),
               // TrimViewer (하단 오버레이)
               Positioned(
                 left: 0,
@@ -352,14 +392,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
               fit: BoxFit.contain,
               child: SizedBox(
                 width: _controller!.value.previewSize!.width,
-                child:
-                kIsWeb ? CameraPreview(_controller!) :
-                Platform.isAndroid ? Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.rotationY(math.pi),
-                  child: CameraPreview(_controller!),
-                ) :
-                CameraPreview(_controller!),
+                child: CameraPreview(_controller!),
+                // child:
+                // kIsWeb ? CameraPreview(_controller!) :
+                // Platform.isAndroid ? Transform(
+                //   alignment: Alignment.center,
+                //   transform: Matrix4.rotationY(math.pi),
+                //   child: CameraPreview(_controller!),
+                // ) :
+                // CameraPreview(_controller!),
               ),
             ),
           ),
@@ -391,6 +432,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ],
             ),
           ),
+          
           // 골퍼 실루엣 가이드라인
           if (!_isRecording)
             Center(
@@ -441,13 +483,40 @@ class _AnalysisPageState extends State<AnalysisPage> {
       barrierDismissible: false, // 사용자가 화면을 닫지 못하도록 설정
       builder: (BuildContext context) {
         return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
-              Text('업로드 중입니다', style: TextStyle(fontSize: 16)),
-            ],
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE6F5E6), // 프로그램 메인 색상
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFA0C3A0), // 테두리 색상
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF4CAF50)), // 녹색 계열
+                ),
+                SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+                Text(
+                  '업로드 중입니다', 
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87, // 진한 검은색으로 가독성 향상
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -565,15 +634,40 @@ class _AnalysisPageState extends State<AnalysisPage> {
         return Dialog(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white, // 흰색 배경으로 변경
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFA0C3A0), // 테두리 색상
+                width: 2,
               ),
-              SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
-              Text('처리 중입니다', style: TextStyle(fontSize: 16)),
-            ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF4CAF50)), // 녹색 계열
+                ),
+                SizedBox(height: 16), // 프로그레스와 텍스트 사이 여백
+                Text(
+                  '처리 중입니다', 
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87, // 진한 검은색으로 가독성 향상
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -599,4 +693,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
       print('비디오 회전 중 오류 발생: $e');
     }
   }
+
+
+
+
 }
