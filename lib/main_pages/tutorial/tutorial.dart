@@ -14,7 +14,8 @@ class TutorialPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('골프 입문 튜토리얼'),
+        title: const Text('골프 입문 가이드북'),
+        backgroundColor: Colors.white,
       ),
       backgroundColor: Colors.white,
       body: ListView.builder(

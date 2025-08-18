@@ -57,7 +57,7 @@ class _MainPageState extends State<MainPage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: '튜토리얼'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: '가이드북'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: '분석'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '마이페이지'),
           BottomNavigationBarItem(icon: Icon(Icons.menu), label: '더보기'),
