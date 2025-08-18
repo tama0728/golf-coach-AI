@@ -98,20 +98,6 @@ class _EditBodyInfoPageState extends State<EditBodyInfoPage> {
         throw Exception('profile update failed: ${patchRes.statusCode} ${patchRes.body}');
       }
 
-      // // 2) 프로필 사진 업로드 (선택된 경우)
-      // if (_pickedImage != null) {
-      //   final req = http.MultipartRequest(
-      //     'POST',
-      //     Uri.parse('http://$base:3000/api/user/profile/photo'),
-      //   );
-      //   req.headers['Authorization'] = 'Bearer $token';
-      //   req.files.add(await http.MultipartFile.fromPath('photo', _pickedImage!.path));
-      //   final res = await req.send();
-      //   if (res.statusCode != 200) {
-      //     throw Exception('photo upload failed: ${res.statusCode}');
-      //   }
-      // }
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('저장되었습니다.')),
@@ -167,23 +153,6 @@ class _EditBodyInfoPageState extends State<EditBodyInfoPage> {
                       hintText: '변경할 닉네임',
                       border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 사진 변경
-                  const Text('사진 변경',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      avatar,
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.photo_library),
-                        label: const Text('앨범에서 선택'),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 24),
 
