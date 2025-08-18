@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import '../../login/app_start.dart';
 import '../../providers/profile_image_provider.dart';
 
 import 'package:flutter/material.dart';
@@ -105,7 +106,7 @@ class _MyPageState extends State<MyPage> {
       print('Error fetching records: $e');
       setState(() {
         records.add(
-            {'fileID': 'null', 'datetime': '데이터를 불러올 수 없습니다', 'score': ''});
+            {'fileID': 'null', 'datetime': '아직 분석 기록이 없습니다.', 'score': ''});
         _isRecordsLoaded = false;
       });
     }
@@ -419,16 +420,23 @@ class UserInfoHeader extends StatelessWidget {
                         // 예시: setState(() => _selectedHand = selected);
                         swingDir = selected;
                         print('선택된 손: $swingDir');
+                        final hand = swingDir == '오른손' ? 0 : 1;
+                        print('스윙 방향: $hand');
                           // 스윙 방향 업데이트
                         try {
-                          final response = await http.get(
-                            Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me'),
+                          final token = await storage.read(key: 'jwt_token');
+                          final response = await http.put(
+                            Uri.parse('http://${dotenv.get('HOSTIP')}:3000/users/me/batting-side'),
                             headers: {
-                              'Authorization': 'Bearer',
+                              if (token != null) 'Authorization': 'Bearer $token',
                             },
+                            body: json.encode({
+                              'batting_side': hand,
+                            }),
                           );
+                          print('스윙 방향 업데이트 응답: ${response.statusCode}');
+                          print('응답 본문: ${response.body}');
                           if (response.statusCode == 200) {
-                            final data = json.decode(response.body);
                           } else if (response.statusCode == 401) {
                           } else if (response.statusCode == 404) {
                           } else {

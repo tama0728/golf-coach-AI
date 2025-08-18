@@ -16,6 +16,7 @@ class TutorialPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('골프 입문 튜토리얼'),
       ),
+      backgroundColor: Colors.white,
       body: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         itemCount: roots.length,
