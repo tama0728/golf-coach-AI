@@ -20,6 +20,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 
+
+
 class AnalysisPage extends StatefulWidget {
   @override
   _AnalysisPageState createState() => _AnalysisPageState();
@@ -430,6 +432,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ],
             ),
           ),
+          
           // 골퍼 실루엣 가이드라인
           if (!_isRecording)
             Center(
@@ -634,7 +637,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
           child: Container(
             padding: EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFE6F5E6), // 프로그램 메인 색상
+              color: Colors.white, // 흰색 배경으로 변경
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: const Color(0xFFA0C3A0), // 테두리 색상
@@ -690,4 +693,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
       print('비디오 회전 중 오류 발생: $e');
     }
   }
+
+
+
+
 }
