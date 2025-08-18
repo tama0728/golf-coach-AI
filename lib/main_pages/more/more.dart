@@ -1,6 +1,8 @@
+import 'package:ffmpeg_kit_flutter_new/packages.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'notice/notice.dart';
 import 'customer_center/customer_center.dart';
@@ -17,6 +19,7 @@ class MorePage extends StatefulWidget {
 class _MorePageState extends State<MorePage> {
   String? _appVersion;
   bool _loadingVersion = true;
+  PackageInfo? _packageInfo;
 
   @override
   void initState() {
@@ -25,6 +28,7 @@ class _MorePageState extends State<MorePage> {
   }
 
   Future<void> fetchAppVersion() async {
+    _packageInfo = await PackageInfo.fromPlatform();
     try {
       final resp = await http.get(Uri.parse('http://localhost:3000/api/version')); //localhost
       if (resp.statusCode == 200) {
@@ -159,17 +163,16 @@ class _MorePageState extends State<MorePage> {
           const Divider(height: 1, thickness: 1),
 
           const SizedBox(height: 24),
-
           // 앱 버전 (DB에서 실시간 표시)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _loadingVersion
+            child: _packageInfo == null
                 ? const Text(
               '앱 버전 정보를 불러오는 중...',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             )
                 : Text(
-              '앱 버전 ${_appVersion ?? '알 수 없음'}',
+              '앱 버전: ${_packageInfo!.version}',
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),
