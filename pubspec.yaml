@@ -54,9 +54,10 @@ dependencies:
   dio: ^5.4.3+1
   flutter_secure_storage: ^9.2.4
 
-  ffmpeg_kit_flutter_new: ^2.0.0
+  ffmpeg_kit_flutter_new: ^3.1.0
   timezone: ^0.10.1
   package_info_plus: ^8.3.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
