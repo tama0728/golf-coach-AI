@@ -6,6 +6,11 @@ AI 기반 골프 스윙 분석 및 코칭 모바일 애플리케이션
 
 Golf Coach AI는 Flutter로 개발된 모바일 애플리케이션으로, AI 기술을 활용하여 골프 스윙을 분석하고 개인 맞춤형 코칭을 제공합니다. 초보자부터 중급자까지 골프 실력 향상을 위한 종합적인 솔루션을 제공합니다.
 
+## 📦 관련 저장소
+
+- **🏌️ Frontend (Mobile)**: [golf-coach-AI](https://github.com/your-username/golf-coach-AI) (현재 저장소)
+- **🖥️ Backend Server**: [golf-coach-backend](https://github.com/tama0728/golf-coach-backend.git)
+
 ## ✨ 주요 기능
 
 ### 🎥 AI 스윙 분석
@@ -37,6 +42,12 @@ Golf Coach AI는 Flutter로 개발된 모바일 애플리케이션으로, AI 기
 - **Provider**: 상태 관리
 - **Camera**: 카메라 기능
 - **Video Player**: 비디오 재생 및 편집
+
+### Backend Server
+- **Repository**: [golf-coach-backend](https://github.com/tama0728/golf-coach-backend.git)
+- **API Communication**: REST API
+- **Authentication**: JWT 토큰 기반
+- **Data Storage**: 사용자 정보, 분석 결과, 영상 데이터
 
 ### Backend Integration
 - **HTTP**: REST API 통신
@@ -89,6 +100,7 @@ lib/
 - Dart SDK
 - Android Studio / VS Code
 - Android/iOS 개발 환경
+- **백엔드 서버** (아래 설정 참조)
 
 ### 설치 및 실행
 
@@ -103,13 +115,26 @@ cd golf-coach-AI
 flutter pub get
 ```
 
-3. **환경 설정**
+3. **백엔드 서버 설정**
 ```bash
-# .env 파일 생성 (루트 디렉토리)
-HOSTIP=your_backend_server_ip
+# 백엔드 서버 저장소 클론
+git clone https://github.com/tama0728/golf-coach-backend.git
+cd golf-coach-backend
+
+# 백엔드 서버 설치 및 실행 (자세한 내용은 백엔드 저장소 README 참조)
+# 서버가 실행되면 기본적으로 3000 포트에서 동작
 ```
 
-4. **앱 실행**
+4. **환경 설정**
+```bash
+# golf-coach-AI 디렉토리로 돌아가서 .env 파일 생성
+cd ../golf-coach-AI
+echo "HOSTIP=localhost" > .env
+# 또는 백엔드 서버가 다른 호스트에 있다면
+# echo "HOSTIP=your_backend_server_ip" > .env
+```
+
+5. **앱 실행**
 ```bash
 flutter run
 ```
